@@ -1,6 +1,6 @@
 # 😶 Wordcel
 
-Wordcell (or, "wordcel" for short), is a library of functions that help users create text-based features from large language models.
+`wordcel` is a library of functions that help users create text-based features from large language models.
 
 Today, it is comprised of a single function `apply_io_bound_function`, which is conceptually similar to Pandas' `.apply`. Because LLMs are primarily consumed via API, users are subject to network latency, errors, and inference costs. Accordingly, the aforementinoed `wordcel` function differs from Pandas' `.apply` in that it handles (a) caching outputs from LLM providers and (b) threading, which increases speed.
 

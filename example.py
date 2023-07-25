@@ -1,5 +1,5 @@
 import pandas as pd
-from wordcel.featurize import apply_io_bound_function_to_df
+from wordcel.featurize import apply_io_bound_function
 from wordcel.llm_providers import openai_call
 
 
@@ -22,7 +22,7 @@ def main():
         prompt = f"Classify the sentiment of the following text into one of two categories, POS or NEG. Respond in one word only.\n\n{text}"
         return openai_call(prompt, model="gpt-3.5-turbo", max_tokens=32)
 
-    results = apply_io_bound_function_to_df(
+    results = apply_io_bound_function(
         df,
         sentiment_classify,
         text_column="text",
