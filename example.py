@@ -32,6 +32,7 @@ def main():
     )
     print(results)
     joined_results = df.join(results.set_index("id"), on="id")
+    print()
     print(joined_results)
 
 

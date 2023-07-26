@@ -2,7 +2,7 @@
 
 `wordcel` is a library of functions that help users create text-based features from large language models.
 
-Today, it is comprised of a single function `apply_io_bound_function`, which is conceptually similar to Pandas' `.apply`. Because LLMs are primarily consumed via API, users are subject to network latency, errors, and inference costs. Accordingly, the aforementinoed `wordcel` function differs from Pandas' `.apply` in that it handles (a) caching outputs from LLM providers and (b) threading, which increases speed.
+Today, it is comprised of a single function `apply_io_bound_function`, which is conceptually similar to Pandas' `.apply`. Because LLMs are primarily consumed via API, users are subject to network latency, errors, and inference costs. Accordingly, the aforementioned `wordcel` function differs from Pandas' `.apply` in that it handles (a) caching outputs from LLM providers and (b) threading, which increases speed.
 
 However, it is up to the user to handle a variety of odds and ends such as API retrying (though `wordcel.llm_providers.openai_call` is provided as a convenience, and popular libraries like Langchain and Llama Index also provide support for retrying) and chunking text. 
 
@@ -70,9 +70,11 @@ This will output:
 2   3    POS
 3   4    POS
 4   5    NEG
+
    id                                               text result
 0   1                 I love this product! It's amazing.    POS
 1   2   The service was terrible. I'm very disappointed.    NEG
 2   3                 The weather today is just perfect.    POS
 3   4    This movie is fantastic. I highly recommend it.    POS
+4   5  I had a bad experience with this company's cus...    NEG
 ```
