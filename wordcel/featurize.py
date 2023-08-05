@@ -61,7 +61,7 @@ def apply_io_bound_function(
         text = row[text_column]
         identifier = row[id_column]
         inference = process_text_with_caching(text, identifier)
-        return {"id": identifier, "result": inference}
+        return {id_column: identifier, "result": inference}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         results = list(executor.map(process_row, df.iterrows()))
