@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wordcel"
-version = "0.0.5"
+version = "0.0.6"
 description = "Create text-based features from large language models"
 authors = ["Andrew Han <handrew11@gmail.com>"]
 readme = "README.md"

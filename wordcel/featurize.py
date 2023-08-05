@@ -44,6 +44,7 @@ def apply_io_bound_function(
             cache_file = os.path.join(cache_folder, f"{identifier}_{user_fn_name}.json")
             if os.path.exists(cache_file):
                 with open(cache_file, "r") as f:
+                    print(f"Found cached result: {cache_file}.")
                     return json.load(f)
 
         result = user_function(text)
