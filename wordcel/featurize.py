@@ -35,15 +35,13 @@ def apply_io_bound_function(
     if id_column is None:
         id_column = df.index.name if df.index.name else "index"
 
-    # Hash the user function. This is used to generate a unique identifier
-    # for each cached file, and avoid collisions.
-    hashed_user_fn = str(hash(user_function))
+    user_fn_name = user_function.__name__ 
 
     def process_text_with_caching(text, identifier):
         if cache_folder:
             # Check if result is already cached
             identifier = str(identifier).replace("/", "_")
-            cache_file = os.path.join(cache_folder, f"{identifier}_{hashed_user_fn}.json")
+            cache_file = os.path.join(cache_folder, f"{identifier}_{user_fn_name}.json")
             if os.path.exists(cache_file):
                 with open(cache_file, "r") as f:
                     return json.load(f)
