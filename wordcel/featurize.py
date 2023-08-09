@@ -10,6 +10,7 @@ def apply_io_bound_function(
     user_function,
     text_column=None,
     id_column=None,
+    result_field="result",
     num_threads=4,
     cache_folder=None,
 ):
@@ -21,6 +22,7 @@ def apply_io_bound_function(
         user_function (function): User-provided function that takes text as input and returns a JSON.
         text_column (str): Name of the column containing the text to process. If None, the first string column will be used.
         id_column (str): Name of the column to be used as the identifier. If None, the DataFrame index will be used.
+        result_field (str): Name of the new colummn to be created. Will also be used in the cache's naming convention.
         num_threads (int): Number of threads for concurrent processing.
         cache_folder (str): Folder to store the cached JSON outputs.
 
@@ -35,13 +37,15 @@ def apply_io_bound_function(
     if id_column is None:
         id_column = df.index.name if df.index.name else "index"
 
-    user_fn_name = user_function.__name__ 
+    user_fn_name = user_function.__name__
 
     def process_text_with_caching(text, identifier):
         if cache_folder:
             # Check if result is already cached
             identifier = str(identifier).replace("/", "_")
-            cache_file = os.path.join(cache_folder, f"{identifier}_{user_fn_name}.json")
+            cache_file = os.path.join(
+                cache_folder, f"{identifier}_{user_fn_name}_{result_field}.json"
+            )
             if os.path.exists(cache_file):
                 with open(cache_file, "r") as f:
                     print(f"Found cached result: {cache_file}.")
@@ -61,7 +65,7 @@ def apply_io_bound_function(
         text = row[text_column]
         identifier = row[id_column]
         inference = process_text_with_caching(text, identifier)
-        return {id_column: identifier, "result": inference}
+        return {id_column: identifier, result_field: inference}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         results = list(executor.map(process_row, df.iterrows()))
