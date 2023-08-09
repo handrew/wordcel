@@ -43,8 +43,9 @@ def apply_io_bound_function(
         if cache_folder:
             # Check if result is already cached
             identifier = str(identifier).replace("/", "_")
+            result_field_normalized = result_field.replace("/", "_")  # For naming...
             cache_file = os.path.join(
-                cache_folder, f"{identifier}_{user_fn_name}_{result_field}.json"
+                cache_folder, f"{identifier}_{user_fn_name}_{result_field_normalized}.json"
             )
             if os.path.exists(cache_file):
                 with open(cache_file, "r") as f:
