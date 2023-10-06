@@ -3,7 +3,7 @@ import openai
 
 
 def openai_call(
-    prompt, model="gpt-3.5-turbo", temperature=0, max_tokens=1024, stop=["```"], sleep=30
+    prompt, model="gpt-3.5-turbo", temperature=0, max_tokens=1024, stop=["```"], sleep=60
 ):
     """Wrapper over OpenAI's completion API."""
     try:
@@ -23,6 +23,7 @@ def openai_call(
         openai.error.APIError,
         openai.error.Timeout,
         openai.error.APIConnectionError,
+        openai.error.ServiceUnavailableError,
     ) as exc:
         print(exc)
         print("Error from OpenAI's API. Sleeping for a few seconds.")
