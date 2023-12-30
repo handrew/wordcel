@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "wordcel"
-version = "0.0.12"
+version = "0.0.13"
 description = "Create text-based features from large language models"
 authors = ["Andrew Han <handrew11@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-openai = ">0.2"
+openai = ">1.0"
 pandas = "*"
 
 
