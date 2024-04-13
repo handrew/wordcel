@@ -19,12 +19,17 @@ def openai_call(
             stop=stop,
         )
         text = response.choices[0].message.content
-    except (
-        openai.RateLimitError,
-        openai.APIError,
-        openai.Timeout,
-        openai.APIConnectionError,
-    ) as exc:
+
+    # With the following code, you'd get
+    # "TypeError: catching classes that do not inherit from BaseException is not allowed"
+    # except (
+    #     openai.RateLimitError,
+    #     openai.APIError,
+    #     openai.Timeout,
+    #     openai.APIConnectionError,
+    # ) as exc:
+    # So we use this instead. But this does not seem quite right either?
+    except Exception as exc:
         print(exc)
         print("Error from OpenAI's API. Sleeping for a few seconds.")
         time.sleep(sleep)
