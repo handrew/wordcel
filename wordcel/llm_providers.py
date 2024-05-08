@@ -1,9 +1,45 @@
 import time
+import anthropic
 import openai
 
 
+def anthropic_call(prompt, model="claude-3-haiku-20240307", temperature=0, max_tokens=1024, sleep=60):
+    """Wrapper over Anthropic's completion API."""
+    client = anthropic.Anthropic()
+    try:
+        message = client.messages.create(
+            model=model,
+            max_tokens=1000,
+            temperature=0,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt,
+                        }
+                    ]
+                }
+            ]
+        )
+    except Exception as exc:
+        print(exc)
+        print("Error from Anthropic's API. Sleeping for a few seconds.")
+        time.sleep(sleep)
+        message = anthropic_call(
+            prompt,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+    text_response = message.content[0].text
+    return text_response
+
+
 def openai_call(
-    prompt, model="gpt-3.5-turbo", temperature=0, max_tokens=1024, stop=["```"], sleep=60
+    prompt, model="gpt-3.5-turbo", temperature=0, max_tokens=1024, stop=None, sleep=60
 ):
     """Wrapper over OpenAI's completion API."""
     client = openai.OpenAI()
