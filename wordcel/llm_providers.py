@@ -66,6 +66,9 @@ def openai_call(
     # ) as exc:
     # So we use this instead. But this does not seem quite right either?
     except Exception as exc:
+        if "maximum context length" in str(exc):
+            print(prompt)
+            raise ValueError("Maximum context length exceeded.")
         print(exc)
         print("Error from OpenAI's API. Sleeping for a few seconds.")
         time.sleep(sleep)
