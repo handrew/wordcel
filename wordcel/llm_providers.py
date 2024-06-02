@@ -3,12 +3,13 @@ import anthropic
 import openai
 
 
-def anthropic_call(prompt, model="claude-3-haiku-20240307", temperature=0, max_tokens=1024, sleep=60):
+def anthropic_call(prompt, system_prompt=None, model="claude-3-haiku-20240307", temperature=0, max_tokens=1024, sleep=60):
     """Wrapper over Anthropic's completion API."""
     client = anthropic.Anthropic()
     try:
         message = client.messages.create(
             model=model,
+            system=system_prompt,
             max_tokens=1000,
             temperature=0,
             messages=[
@@ -39,14 +40,18 @@ def anthropic_call(prompt, model="claude-3-haiku-20240307", temperature=0, max_t
 
 
 def openai_call(
-    prompt, model="gpt-3.5-turbo", temperature=0, max_tokens=1024, stop=None, sleep=60
+    prompt, system_prompt=None, model="gpt-3.5-turbo", temperature=0, max_tokens=1024, stop=None, sleep=60
 ):
     """Wrapper over OpenAI's completion API."""
     client = openai.OpenAI()
     try:
+        messages = [{"role": "user", "content": prompt}]
+        if system_prompt:
+            messages.insert(0, {"role": "system", "content": system_prompt})
+
         response = client.chat.completions.create(
             model=model,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
             max_tokens=max_tokens,
             top_p=1,
             frequency_penalty=0,
