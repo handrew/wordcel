@@ -1,39 +1,30 @@
+# import os
 import time
 import anthropic
 import openai
+# import google.generativeai as genai
 
 
 def anthropic_call(prompt, system_prompt=None, model="claude-3-haiku-20240307", temperature=0, max_tokens=1024, sleep=60):
     """Wrapper over Anthropic's completion API."""
     client = anthropic.Anthropic()
-    try:
-        message = client.messages.create(
-            model=model,
-            system=system_prompt,
-            max_tokens=1000,
-            temperature=0,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": prompt,
-                        }
-                    ]
-                }
-            ]
-        )
-    except Exception as exc:
-        print(exc)
-        print("Error from Anthropic's API. Sleeping for a few seconds.")
-        time.sleep(sleep)
-        message = anthropic_call(
-            prompt,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+    message = client.messages.create(
+        model=model,
+        system=system_prompt,
+        max_tokens=1000,
+        temperature=0,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt,
+                    }
+                ]
+            }
+        ]
+    )
 
     text_response = message.content[0].text
     return text_response
@@ -85,3 +76,32 @@ def openai_call(
         )
 
     return text
+
+
+# def gemini_call(
+#     prompt, model_name="gemini-1.5-flash", temperature=0, max_tokens=8192, sleep=60
+# ):
+#     """Wrapper over Google Gemini's text generation API."""
+#     if "GEMINI_API_KEY" not in os.environ:
+#         raise ValueError("GEMINI_API_KEY environment variable not set.")
+    
+#     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+
+#     generation_config = {
+#         "temperature": temperature,
+#         "top_p": 0.95,
+#         "top_k": 64,
+#         "max_output_tokens": max_tokens,
+#         "response_mime_type": "text/plain",
+#     }
+
+#     model = genai.GenerativeModel(model_name=model_name, generation_config=generation_config)
+    
+#     # Start the chat session 
+#     chat_session = model.start_chat()
+
+#     # Send the message and get the response
+#     response = chat_session.send_message(prompt)
+#     text = response.text 
+    
+#     return text
