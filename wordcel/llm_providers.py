@@ -1,8 +1,8 @@
-# import os
+import os
 import time
 import anthropic
 import openai
-# import google.generativeai as genai
+import google.generativeai as genai
 
 
 def anthropic_call(prompt, system_prompt=None, model="claude-3-haiku-20240307", temperature=0, max_tokens=1024, sleep=60):
