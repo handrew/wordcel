@@ -78,30 +78,30 @@ def openai_call(
     return text
 
 
-# def gemini_call(
-#     prompt, model_name="gemini-1.5-flash", temperature=0, max_tokens=8192, sleep=60
-# ):
-#     """Wrapper over Google Gemini's text generation API."""
-#     if "GEMINI_API_KEY" not in os.environ:
-#         raise ValueError("GEMINI_API_KEY environment variable not set.")
+def gemini_call(
+    prompt, model_name="gemini-1.5-flash", temperature=0, max_tokens=8192, sleep=60
+):
+    """Wrapper over Google Gemini's text generation API."""
+    if "GEMINI_API_KEY" not in os.environ:
+        raise ValueError("GEMINI_API_KEY environment variable not set.")
     
-#     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-#     generation_config = {
-#         "temperature": temperature,
-#         "top_p": 0.95,
-#         "top_k": 64,
-#         "max_output_tokens": max_tokens,
-#         "response_mime_type": "text/plain",
-#     }
+    generation_config = {
+        "temperature": temperature,
+        "top_p": 0.95,
+        "top_k": 64,
+        "max_output_tokens": max_tokens,
+        "response_mime_type": "text/plain",
+    }
 
-#     model = genai.GenerativeModel(model_name=model_name, generation_config=generation_config)
+    model = genai.GenerativeModel(model_name=model_name, generation_config=generation_config)
     
-#     # Start the chat session 
-#     chat_session = model.start_chat()
+    # Start the chat session 
+    chat_session = model.start_chat()
 
-#     # Send the message and get the response
-#     response = chat_session.send_message(prompt)
-#     text = response.text 
+    # Send the message and get the response
+    response = chat_session.send_message(prompt)
+    text = response.text 
     
-#     return text
+    return text
