@@ -5,24 +5,19 @@ import openai
 import google.generativeai as genai
 
 
-def anthropic_call(prompt, system_prompt=None, model="claude-3-haiku-20240307", temperature=0, max_tokens=1024, sleep=60):
+def anthropic_call(prompt, system_prompt="You are a helpful assistant.", model="claude-3-haiku-20240307", temperature=0, max_tokens=1024, sleep=60):
     """Wrapper over Anthropic's completion API."""
     client = anthropic.Anthropic()
     message = client.messages.create(
         model=model,
         system=system_prompt,
-        max_tokens=1000,
-        temperature=0,
+        max_tokens=max_tokens,
+        temperature=temperature,
         messages=[
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt,
-                    }
-                ]
-            }
+                "content": prompt
+            },
         ]
     )
 
