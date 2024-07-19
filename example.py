@@ -20,7 +20,7 @@ def main():
 
     def sentiment_classify(text):
         prompt = f"Classify the sentiment of the following text into one of two categories, POS or NEG. Respond in one word only.\n\n{text}"
-        return openai_call(prompt, model="gpt-3.5-turbo", max_tokens=32)
+        return openai_call(prompt, model="gpt-4o-mini", max_tokens=32)
 
     results = apply_io_bound_function(
         df,

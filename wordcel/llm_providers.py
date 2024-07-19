@@ -26,7 +26,7 @@ def anthropic_call(prompt, system_prompt="You are a helpful assistant.", model="
 
 
 def openai_call(
-    prompt, system_prompt=None, model="gpt-3.5-turbo", temperature=0, max_tokens=1024, stop=None, sleep=60
+    prompt, system_prompt=None, model="gpt-4o-mini", temperature=0, max_tokens=1024, stop=None, sleep=60
 ):
     """Wrapper over OpenAI's completion API."""
     client = openai.OpenAI()
