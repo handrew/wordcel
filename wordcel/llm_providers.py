@@ -93,7 +93,7 @@ def openai_call(
 
 
 def gemini_call(
-    prompt, system_prompt=None, model_name="gemini-1.5-flash", temperature=0, max_tokens=8192, sleep=60
+    prompt, system_prompt=None, model="gemini-1.5-flash", temperature=0, max_tokens=8192, sleep=60
 ):
     """Wrapper over Google Gemini's text generation API."""
     if "GEMINI_API_KEY" not in os.environ:
@@ -111,12 +111,12 @@ def gemini_call(
 
     if system_prompt is None:
         model = genai.GenerativeModel(
-            model_name=model_name,
+            model_name=model,
             generation_config=generation_config,
         )
     else:
         model = genai.GenerativeModel(
-            model_name=model_name,
+            model_name=model,
             generation_config=generation_config,
             system_instruction=system_prompt,
         )
