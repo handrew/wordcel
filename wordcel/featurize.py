@@ -1,4 +1,4 @@
-"""Main list of functions."""
+"""Functions to help rapidly featurize text."""
 import concurrent.futures
 import json
 import os
