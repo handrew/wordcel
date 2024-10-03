@@ -41,13 +41,13 @@ def openai_call(
 ):
     """Wrapper over OpenAI's completion API."""
     # Assert both base_url and api_key are set or neither is set.
-    assert (base_url is None) == (api_key is None), (
-        "Both api_base and api_key must be set or neither should be set."
-    )
+    assert (base_url is None) == (
+        api_key is None
+    ), "Both api_base and api_key must be set or neither should be set."
     client = openai.OpenAI()
     if base_url is not None:
         client = openai.OpenAI(base_url=base_url, api_key=api_key)
-    
+
     try:
         messages = [{"role": "user", "content": prompt}]
         if system_prompt:
@@ -92,7 +92,12 @@ def openai_call(
 
 
 def gemini_call(
-    prompt, system_prompt=None, model="gemini-1.5-flash", temperature=0, max_tokens=8192, sleep=60
+    prompt,
+    system_prompt=None,
+    model="gemini-1.5-flash",
+    temperature=0,
+    max_tokens=8192,
+    sleep=60,
 ):
     """Wrapper over Google Gemini's text generation API."""
     if "GEMINI_API_KEY" not in os.environ:
@@ -128,3 +133,17 @@ def gemini_call(
     text = response.text
 
     return text
+
+
+def openai_embed(text, model="text-embedding-3-small"):
+    """Wrapper over OpenAI's embedding API."""
+    client = openai.OpenAI()
+    response = (
+        client.embeddings.create(
+            input=[text],
+            model=model,
+        )
+        .data[0]
+        .embedding
+    )
+    return response
