@@ -11,7 +11,6 @@ def anthropic_call(
     model="claude-3-haiku-20240307",
     temperature=0,
     max_tokens=1024,
-    sleep=60,
 ):
     """Wrapper over Anthropic's completion API."""
     client = anthropic.Anthropic()
