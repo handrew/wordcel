@@ -8,7 +8,7 @@ Candidly, it is mostly a set of functions that I myself use on a regular basis -
 
 You can simply `pip install wordcel`.
 
-## Uses
+## Documentation
 
 ### LLM providers
 
@@ -31,7 +31,7 @@ It's all in memory. You can persist the retriever to disk and load it back, but 
 
 It is loosely inspired by [Anthropic's provided workbook](https://github.com/anthropics/anthropic-cookbook/blob/main/skills/contextual-embeddings/guide.ipynb).
 
-```
+```python
 from wordcel.rag.contextual_retrieval import ContextualRetrieval
 retriever = ContextualRetrieval(docs)
 retriever.index_documents()
