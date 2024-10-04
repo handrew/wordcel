@@ -59,7 +59,8 @@ Much of Silver's approach can be characterized by using probabilistic and statis
 """
 
 
-docs = [capybara, kerodon, nate_silver] 
+docs = [capybara, kerodon, nate_silver]
+
 
 def test_indexing_and_save():
     retriever = ContextualRetrieval(docs)
@@ -67,11 +68,13 @@ def test_indexing_and_save():
     print(retriever.retrieve("what genus is a capybara?"))
     retriever.save("retriever.pkl")
 
+
 def test_load_and_retrieve():
     retriever = ContextualRetrieval.from_saved("retriever.pkl")
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(retriever.retrieve("what genus is a capybara?"))
     print(retriever.generate("what genus is a capybara?"))
+
 
 test_indexing_and_save()
 test_load_and_retrieve()

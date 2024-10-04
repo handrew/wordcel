@@ -1,4 +1,5 @@
 """WIP: Functions to help with RAG."""
+
 import json
 import numpy as np
 from typing import List

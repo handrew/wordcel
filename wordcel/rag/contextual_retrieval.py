@@ -122,7 +122,11 @@ class ContextualRetrieval:
             chunk_idx = 0
             for doc_idx, doc_chunks in chunks:
                 for doc_chunk in doc_chunks:
-                    situated_chunk = situate_context(self.docs[doc_idx], doc_chunk) + "\n\n" +  doc_chunk
+                    situated_chunk = (
+                        situate_context(self.docs[doc_idx], doc_chunk)
+                        + "\n\n"
+                        + doc_chunk
+                    )
                     situated_chunks.append((doc_idx, chunk_idx, situated_chunk))
                     chunk_idx += 1
             self.chunks = pd.DataFrame(
@@ -131,13 +135,13 @@ class ContextualRetrieval:
 
         if self.embeddings is None:
             log.info("Embedding chunks...")
-            self.embeddings = embed_chunks(
-                self.chunks["chunk"].tolist()
-            )
+            self.embeddings = embed_chunks(self.chunks["chunk"].tolist())
 
         if self.tfidf_index is None:
             log.info("Creating TF-IDF index...")
-            self.tfidf_vectorizer, self.tfidf_index = create_tfidf_index(self.chunks["chunk"].tolist())
+            self.tfidf_vectorizer, self.tfidf_index = create_tfidf_index(
+                self.chunks["chunk"].tolist()
+            )
 
     def save(self, path: str):
         """Save the current state of the retriever to a file."""
@@ -163,7 +167,7 @@ class ContextualRetrieval:
             self.tfidf_vectorizer = data["tfidf_vectorizer"]
 
     def retrieve(
-        self, query: str, top_k: int=5, semantic_weight=0.5, tfidf_weight=0.5
+        self, query: str, top_k: int = 5, semantic_weight=0.5, tfidf_weight=0.5
     ) -> List[Dict]:
         """Retrieve the top-k chunks for a given query."""
         if self.chunks is None or self.embeddings is None or self.tfidf_index is None:
@@ -176,7 +180,9 @@ class ContextualRetrieval:
         semantic_similarities = cosine_similarity_vectorized(
             query_embedding, self.embeddings
         )
-        tfidf_similarities = cosine_similarity_vectorized(query_tfidf, self.tfidf_index.toarray())
+        tfidf_similarities = cosine_similarity_vectorized(
+            query_tfidf, self.tfidf_index.toarray()
+        )
 
         semantic_ranks = semantic_similarities.argsort()[::-1][:top_k].tolist()
         tfidf_ranks = tfidf_similarities.argsort()[::-1][:top_k].tolist()
@@ -188,7 +194,9 @@ class ContextualRetrieval:
             score = 0
             if chunk_id in semantic_ranks:
                 idx = semantic_ranks.index(chunk_id)
-                score += semantic_weight * (1 / (idx + 1))  # Weighted 1/n scoring for semantic.
+                score += semantic_weight * (
+                    1 / (idx + 1)
+                )  # Weighted 1/n scoring for semantic.
 
             if chunk_id in tfidf_ranks:
                 idx = tfidf_ranks.index(chunk_id)
@@ -200,7 +208,7 @@ class ContextualRetrieval:
         sorted_chunk_ids = sorted(
             chunk_id_to_score.keys(), key=lambda x: chunk_id_to_score[x], reverse=True
         )
-        
+
         # Assign new scores based on the sorted order.
         for index, chunk_id in enumerate(sorted_chunk_ids):
             chunk_id_to_score[chunk_id] = 1 / (index + 1)
@@ -209,14 +217,16 @@ class ContextualRetrieval:
         final_results = []
         for chunk_id in sorted_chunk_ids[:top_k]:
             doc_idx, chunk_idx = self.chunks.iloc[chunk_id][["doc_idx", "chunk_idx"]]
-            final_results.append({
-                "doc_idx": doc_idx,
-                "chunk_idx": chunk_idx,
-                "chunk": self.chunks.iloc[chunk_id]["chunk"],
-                "semantic_similarity": semantic_similarities[chunk_id],
-                "tfidf_similarity": tfidf_similarities[chunk_id],
-                "score": chunk_id_to_score[chunk_id],
-            })
+            final_results.append(
+                {
+                    "doc_idx": doc_idx,
+                    "chunk_idx": chunk_idx,
+                    "chunk": self.chunks.iloc[chunk_id]["chunk"],
+                    "semantic_similarity": semantic_similarities[chunk_id],
+                    "tfidf_similarity": tfidf_similarities[chunk_id],
+                    "score": chunk_id_to_score[chunk_id],
+                }
+            )
 
         return final_results
 
@@ -232,11 +242,14 @@ class ContextualRetrieval:
         """Retrieves top-k chunks using `search_query` and generates the
         response given those chunks using `generation_query` if given or
         `search_query` if not.
-        
+
         This function is only given as an example. You should likely customize
         your own generation function based on your use case."""
         retrieved_chunks = self.retrieve(
-            search_query, top_k=top_k, semantic_weight=semantic_weight, tfidf_weight=tfidf_weight
+            search_query,
+            top_k=top_k,
+            semantic_weight=semantic_weight,
+            tfidf_weight=tfidf_weight,
         )
         if generation_query is None:
             generation_query = search_query
@@ -244,7 +257,7 @@ class ContextualRetrieval:
         prompt = ""
         for chunk in retrieved_chunks:
             prompt += f"{chunk}\n\n"
-        
+
         prompt += f"Given the above information, answer the following query:\n\n{generation_query}"
 
         response = llm_fn(prompt)
