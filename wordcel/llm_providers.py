@@ -48,45 +48,21 @@ def openai_call(
     if base_url is not None:
         client = openai.OpenAI(base_url=base_url, api_key=api_key)
 
-    try:
-        messages = [{"role": "user", "content": prompt}]
-        if system_prompt:
-            messages.insert(0, {"role": "system", "content": system_prompt})
+    messages = [{"role": "user", "content": prompt}]
+    if system_prompt:
+        messages.insert(0, {"role": "system", "content": system_prompt})
 
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0,
-            temperature=temperature,
-            stop=stop,
-        )
-        text = response.choices[0].message.content
-
-    # With the following code, you'd get
-    # "TypeError: catching classes that do not inherit from BaseException is not allowed"
-    # except (
-    #     openai.RateLimitError,
-    #     openai.APIError,
-    #     openai.Timeout,
-    #     openai.APIConnectionError,
-    # ) as exc:
-    # So we use this instead. But this does not seem quite right either?
-    except Exception as exc:
-        if "maximum context length" in str(exc):
-            raise ValueError("Maximum context length exceeded.")
-        print(exc)
-        print("Error from OpenAI's API. Sleeping for a few seconds.")
-        time.sleep(sleep)
-        text = openai_call(
-            prompt,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stop=stop,
-        )
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        max_tokens=max_tokens,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0,
+        temperature=temperature,
+        stop=stop,
+    )
+    text = response.choices[0].message.content
 
     return text
 

@@ -17,6 +17,8 @@ For convenience, I provide a number of functions to call popular APIs.
 ```python
 from wordcel.llm_providers import openai_call, anthropic_call, gemini_call
 from wordcel.llm_providers import openai_embed
+
+openai_call("hey")
 ```
 
 They are extremely bare, so it is up to the user to handle a variety of odds and ends such as API retrying.
