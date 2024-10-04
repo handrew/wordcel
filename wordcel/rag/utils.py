@@ -49,7 +49,7 @@ def embed_chunks(chunks: List[str], embed_fn=openai_embed) -> List[str]:
     return np.array(embeddings)
 
 
-def create_tfidf_index(chunks: List[str]) -> List[str]:
+def create_tfidf_index(chunks: List[str]):
     """Create a TF-IDF index for a list of chunks."""
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform(chunks)

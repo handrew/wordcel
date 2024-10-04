@@ -1,5 +1,4 @@
 import os
-import time
 import anthropic
 import openai
 import google.generativeai as genai
@@ -35,7 +34,6 @@ def openai_call(
     temperature=0,
     max_tokens=1024,
     stop=None,
-    sleep=60,
     base_url=None,
     api_key=None,
 ):
@@ -73,7 +71,6 @@ def gemini_call(
     model="gemini-1.5-flash",
     temperature=0,
     max_tokens=8192,
-    sleep=60,
 ):
     """Wrapper over Google Gemini's text generation API."""
     if "GEMINI_API_KEY" not in os.environ:
