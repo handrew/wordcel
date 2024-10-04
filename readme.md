@@ -1,16 +1,45 @@
 # 😶 Wordcel
 
-`wordcel` is a library of functions that help users create text-based features from large language models.
+`wordcel` is a library of functions that provides a set of common tools for working with large language models.
 
-Today, it is comprised of a single function `apply_io_bound_function`, which is conceptually similar to Pandas' `.apply`. Because LLMs are primarily consumed via API, users are subject to network latency, errors, and inference costs. Accordingly, the aforementioned `wordcel` function differs from Pandas' `.apply` in that it handles (a) caching outputs from LLM providers and (b) threading, which increases speed.
-
-However, it is up to the user to handle a variety of odds and ends such as API retrying (though `wordcel.llm_providers.openai_call` is provided as a convenience, and popular libraries like Langchain and Llama Index also provide support for retrying) and chunking text. 
+Candidly, it is mostly a set of functions that I myself use on a regular basis -- my own personal swiss army knife. 
 
 ## Installation
 
 You can simply `pip install wordcel`.
 
-## Example Usage
+## Uses
+
+### LLM providers
+
+For convenience, I provide a number of functions to call popular APIs. 
+
+```python
+from wordcel.llm_providers import openai_call, anthropic_call, gemini_call
+from wordcel.llm_providers import openai_embed
+```
+
+They are extremely bare, so it is up to the user to handle a variety of odds and ends such as API retrying.
+
+### Contextual Retrieval
+
+I provide a minimal implementation of a version of Anthropic's [Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval/), without the need for several paid / private APIs. It is an extremely stripped down version with no reranking, no BM-25 -- just TF-IDF, vector embeddings, and rank fusion.
+
+It's all in memory. You can persist the retriever to disk and load it back, but it's not optimized for speed, memory usage, or disk space. 
+
+It is loosely inspired by [Anthropic's provided workbook](https://github.com/anthropics/anthropic-cookbook/blob/main/skills/contextual-embeddings/guide.ipynb).
+
+```
+from wordcel.rag.contextual_retrieval import ContextualRetrieval
+retriever = ContextualRetrieval(docs)
+retriever.index_documents()
+print(retriever.retrieve("<your search_query>"))
+retriever.save("retriever.pkl")
+```
+
+### Fast LLM pandas apply
+
+The primary function here is `apply_io_bound_function`, which is conceptually similar to Pandas' `.apply`. Because LLMs are primarily consumed via API, users are subject to network latency, errors, and inference costs. Accordingly, the function differs from Pandas' `.apply` in that it handles (a) locally caching outputs from LLM providers and (b) threading, which increases speed.
 
 First import the relevant functions.
 

@@ -1,15 +1,17 @@
 [tool.poetry]
 name = "wordcel"
-version = "0.0.26"
+version = "0.1.0"
 description = "Create text-based features from large language models"
 authors = ["Andrew Han <handrew11@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 openai = ">1.0"
-anthropic = ">0.25.0" 
+anthropic = ">=0.34.2" 
 google-generativeai = ">=0.6.0"
 pandas = "*"
+sklearn = "*"
+langchain = ">0.3.0"
 
 
 [build-system]
