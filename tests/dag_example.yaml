@@ -1,0 +1,88 @@
+dag:
+  name: my_llm_dataframe_pipeline
+
+# Test for a simple pipeline with LLM filtering
+
+# nodes:
+#   - id: get_data
+#     type: csv
+#     path: "https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv"
+
+#   - id: df_filter
+#     type: dataframe_operation
+#     input: get_data
+#     operation: "head"
+#     args: [2]
+
+#   - id: llm_filter
+#     input: df_filter
+#     type: llm_filter
+#     column: "Country"
+#     prompt: "Is this country in Africa? Answer only Yes or No."
+
+#   - id: process_filtered
+#     type: llm
+#     template: "What cuisine is this country known for? {input}"
+#     input: llm_filter
+#     input_column: "Country"
+
+#   - id: save_results
+#     type: file_writer
+#     path: "output.txt"
+#     input: process_filtered
+
+
+# Test for a simple pipeline with LLM filtering and a dataframe operation
+
+# nodes:
+#   - id: countries_data
+#     type: csv
+#     path: https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv
+
+#   - id: mtcars_data
+#     type: csv
+#     path: https://raw.githubusercontent.com/cs109/2014_data/master/mtcars.csv
+
+#   - id: combine_data
+#     type: dataframe_operation
+#     operation: concat
+#     kwargs:
+#       axis: 1
+#     input:
+#       - countries_data
+#       - mtcars_data
+
+#   - id: output
+#     type: file_writer
+#     path: combined_output.csv
+#     input: combine_data
+
+
+# Test for a simple pipeline with multiple inputs and outputs
+
+nodes:
+  - id: node1
+    type: csv
+    path: https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv
+
+  - id: node2
+    type: dataframe_operation
+    input: node1
+    operation: head
+    args: [10]
+
+  - id: node3
+    type: dataframe_operation
+    input: node1
+    operation: tail
+    args: [10]
+
+  - id: node4
+    type: llm
+    input: [node2, node3]
+    template: "Summarize this data: {input}"
+
+  - id: node5
+    input: node4
+    type: file_writer
+    path: output.txt
