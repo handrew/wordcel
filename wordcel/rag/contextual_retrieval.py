@@ -75,7 +75,7 @@ def situate_context(doc: str, chunk: str) -> str:
 
 class ContextualRetrieval:
     def __init__(
-        self, docs: List[str], chunk_size=200, chunk_overlap=10, llm_fn=anthropic_call
+        self, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=anthropic_call
     ):
         self.docs = docs
         self.chunk_size = chunk_size
@@ -90,13 +90,13 @@ class ContextualRetrieval:
 
     @classmethod
     def from_documents(cls, docs: List[str], llm_fn=anthropic_call):
-        instance = cls(docs, llm_fn)
+        instance = cls(docs, llm_fn=llm_fn)
         instance.index_documents()
         return instance
 
     @classmethod
     def from_saved(cls, path: str):
-        instance = cls([], None)  # Create an empty instance
+        instance = cls([], llm_fn=None)  # Create an empty instance
         instance.load(path)
         return instance
 
