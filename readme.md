@@ -2,7 +2,7 @@
 
 `wordcel` is a library of functions that provides a set of common tools for working with large language models.
 
-Candidly, it is mostly a set of functions that I myself use on a regular basis -- my own personal Swiss army knife. 
+Candidly, it is mostly a set of functions that I myself use on a regular basis — my own personal Swiss army knife. 
 
 ## Installation
 
