@@ -10,8 +10,6 @@ def apply_io_bound_function(
     df,
     user_function,
     text_column=None,
-    id_column=None,
-    result_field="result",
     num_threads=4,
     cache_folder=None
 )
@@ -27,7 +25,7 @@ Apply an I/O bound user-provided function to a specific column in a Pandas DataF
 - `cache_folder` (str, optional): Folder to store the cached JSON outputs. Default: None
 
 **Returns:**
-- pd.DataFrame: The original DataFrame with an additional column (named by `result_field`) containing the JSON outputs.
+- pd.Series: A series of the results, index-aligned with the original df.
 
 
 **Example:**
