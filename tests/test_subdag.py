@@ -1,7 +1,6 @@
 import unittest
 import tempfile
 import os
-import pandas as pd
 from unittest.mock import patch
 from wordcel.dag import WordcelDAG
 
