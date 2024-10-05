@@ -39,6 +39,9 @@ The DAG is defined in a YAML file with the following structure:
 ```yaml
 dag:
   name: "Your DAG Name"
+  backend:
+    type: local
+    cache_dir: path/to/your/cache/folder
 
 nodes:
   - id: "node1"
@@ -95,6 +98,28 @@ class MyCustomNode(Node):
 dag = WordcelDAG("path/to/your/dag.yaml", custom_nodes={"my_custom_node": MyCustomNode})
 ```
 
+## Backends
+
+WordcelDAG supports the use of backends for caching node results. This can significantly speed up repeated executions of the DAG by avoiding redundant computations.
+
+### Using Backends
+
+To use a backend, specify it in your DAG configuration YAML file:
+
+```yaml
+dag:
+  name: "Your DAG Name"
+  backend:
+    type: "local"
+    cache_dir: "/path/to/cache/directory"
+
+nodes:
+  # ... node definitions ...
+```
+
+
+
+
 ## YAML Examples
 
 ### LLM-based Text Processing
@@ -134,7 +159,7 @@ nodes:
 
 ## Other Features
 
-- Secrets Management: Use a separate YAML file for sensitive information
-- Custom Functions: Pass custom functions to be used in nodes
-- DAG Visualization: Use `dag.save_image("path/to/image.png")` to visualize your DAG
-
+- Secrets Management: Use a separate YAML file for sensitive information.
+- Custom Functions: Pass custom functions to be used in nodes.
+- Backends: Use backends to cache node results and speed up repeated executions.
+- DAG Visualization: Use `dag.save_image("path/to/image.png")` to visualize your DAG.

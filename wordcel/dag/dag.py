@@ -1,11 +1,14 @@
 """DAG definition and node implementations."""
+import json
 import logging
 import yaml
+import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 from typing import Dict, Any, Type, Callable
 from ..llm_providers import openai_call
 from .nodes import Node, NodeRegistry
+from .backends import Backend, BackendRegistry
 from .default_functions import read_sql, llm_filter
 
 log: logging.Logger = logging.getLogger(__name__)
@@ -27,6 +30,21 @@ def create_node(
     return node
 
 
+def _is_json_serializable(data: Any) -> bool:
+    """Check if the data is JSON serializable, or is a DataFrame which
+    is JSON serializable."""
+    try:
+        if hasattr(data, "to_json"):
+            data.to_json()
+        elif isinstance(data, pd.DataFrame):
+            data.to_json()
+        else:
+            json.dumps(data)
+        return True
+    except TypeError:
+        return False
+
+
 """DAG definition."""
 
 
@@ -45,6 +63,7 @@ class WordcelDAG:
         secrets_file: str = None,
         custom_functions: Dict[str, Callable] = None,
         custom_nodes: Dict[str, Type[Node]] = None,
+        custom_backends: Dict[str, Type[Backend]] = None,
     ):
         """
         Initialize the DAG from a YAML file.
@@ -52,33 +71,29 @@ class WordcelDAG:
         @param secrets_file: The path to the YAML file containing the secrets.
         """
         log.warning("This class is still experimental: use at your own risk.")
+
+        # First load the configuration and secrets.
         self.config = WordcelDAG.load_yaml(yaml_file)
         self.name = self.config["dag"]["name"]
-
+        self.backend_config = self.config["dag"].get("backend", {})
         self.secrets = {}
         if secrets_file is not None:
             self.secrets = WordcelDAG.load_secrets(secrets_file)
 
-        # Register default nodes.
-        NodeRegistry.register_default_nodes()
+        # Register functions, nodes, backend.
+        self._register_default_and_custom_functions(custom_functions)
+        self._register_default_and_custom_nodes(custom_nodes)
+        self._register_default_and_custom_backends(custom_backends)
 
-        # Register custom nodes if provided.
-        if custom_nodes:
-            for node_type, node_class in custom_nodes.items():
-                NodeRegistry.register(node_type, node_class)
+        # Create the backend.
+        backend_type = self.backend_config.get("type") if self.backend_config else None
+        if backend_type:
+            assert (
+                BackendRegistry.get(backend_type) is not None
+            ), f"Unknown backend: {backend_type}"
+            self.backend = BackendRegistry.get(backend_type)(self.backend_config)
 
-        # Register custom functions.
-        self.functions = self.default_functions
-        if custom_functions:
-            # Assert that the custom functions do not override the defaults.
-            for key, value in custom_functions.items():
-                if key in self.default_functions:
-                    raise ValueError(
-                        f"Custom function {key} overrides default function."
-                    )
-
-            self.functions.update(custom_functions)
-
+        # Create the graph and nodes.
         self.graph = self.create_graph()
         self.nodes = self.create_nodes()
 
@@ -92,6 +107,33 @@ class WordcelDAG:
     def load_secrets(secrets_file: str) -> Dict[str, str]:
         """Load a secrets file."""
         return WordcelDAG.load_yaml(secrets_file)
+    
+    def _register_default_and_custom_functions(self, custom_functions: Dict[str, Callable] = None) -> None:
+        """Register custom functions."""
+        self.functions = self.default_functions
+        if custom_functions:
+            # Assert that the custom functions do not override the defaults.
+            for key, value in custom_functions.items():
+                if key in self.default_functions:
+                    raise ValueError(
+                        f"Custom function {key} overrides default function."
+                    )
+
+            self.functions.update(custom_functions)
+
+    def _register_default_and_custom_nodes(self, custom_nodes: Dict[str, Type[Node]] = None) -> None:
+        """Register custom nodes."""
+        NodeRegistry.register_default_nodes()
+        if custom_nodes:
+            for node_type, node_class in custom_nodes.items():
+                NodeRegistry.register(node_type, node_class)
+
+    def _register_default_and_custom_backends(self, custom_backends: Dict[str, Type[Backend]] = None) -> None:
+        """Register custom backends."""
+        BackendRegistry.register_default_backends()
+        if custom_backends:
+            for backend_type, backend_class in custom_backends.items():
+                BackendRegistry.register(backend_type, backend_class)
 
     def save_image(self, path: str) -> None:
         """Save an image of the DAG using graph.draw."""
@@ -130,11 +172,24 @@ class WordcelDAG:
         for node_id in nx.topological_sort(self.graph):
             log.info(f"Executing node `{node_id}` from DAG `{self.name}`.")
             node = self.nodes[node_id]
-            input_config = self.graph.nodes[node_id].get("input")
-            if isinstance(input_config, list):
-                output = [results[input_id] for input_id in input_config]
+            incoming_edges = self.graph.nodes[node_id].get("input")
+            if isinstance(incoming_edges, list):
+                incoming_input = [results[input_id] for input_id in incoming_edges]
             else:
-                output = results.get(input_config)
+                incoming_input = results.get(incoming_edges)
 
-            results[node_id] = node.execute(output)
+            # Check the cache, if we have a backend.
+            if self.backend and self.backend.exists(node_id):
+                log.info(f"Loading node `{node_id}` from cache.")
+                results[node_id] = self.backend.load(node_id)
+            else:
+                results[node_id] = node.execute(incoming_input)
+                if not _is_json_serializable(results[node_id]):
+                    raise ValueError(
+                        f"Node `{node_id}` returned non-serializable data."
+                    )
+
+                if self.backend:
+                    log.info(f"Saving node `{node_id}` to cache.")
+                    self.backend.save(node_id, results[node_id])
         return results
