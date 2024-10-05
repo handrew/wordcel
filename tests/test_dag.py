@@ -40,19 +40,21 @@ nodes:
     type: dataframe_operation
     input: get_data
     operation: "head"
-    args: [2]
+    args: [10]
 
   - id: llm_filter
     input: df_filter
     type: llm_filter
     column: "Country"
     prompt: "Is this country in Africa? Answer only Yes or No."
+    num_threads: 2
 
   - id: process_filtered
     type: llm
     template: "What cuisine is this country known for? {input}"
     input: llm_filter
     input_column: "Country"
+    num_threads: 2
 
   - id: save_results
     type: file_writer

@@ -23,8 +23,6 @@ Apply an I/O bound user-provided function to a specific column in a Pandas DataF
 - `df` (pd.DataFrame): Pandas DataFrame containing the data.
 - `user_function` (function): User-provided function that takes text as input and returns a JSON.
 - `text_column` (str): Name of the column containing the text to process. If None, the first string column will be used.
-- `id_column` (str): Name of the column to be used as the identifier. If None, the DataFrame index will be used.
-- `result_field` (str): Name of the new column to be created. Will also be used in the cache's naming convention.
 - `num_threads` (int, optional): Number of threads for concurrent processing. Default: 4
 - `cache_folder` (str, optional): Folder to store the cached JSON outputs. Default: None
 
@@ -73,14 +71,13 @@ results = apply_io_bound_function(
     df,
     sentiment_classify,
     text_column="text",
-    id_column="id",
     num_threads=4,
     cache_folder="cache",
 )
 print(results)
-joined_results = df.join(results.set_index("id"), on="id")
-print()
-print(joined_results)
+df["results"] = results 
+print("\nJoined Results:")
+print(df)
 ```
 
 This will output:

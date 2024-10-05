@@ -10,6 +10,8 @@ from typing import Dict, Any, Type, Callable, List, Union
 from abc import ABC, abstractmethod
 from sqlalchemy import create_engine
 from .llm_providers import openai_call
+import concurrent.futures
+from .featurize import apply_io_bound_function
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -86,25 +88,28 @@ class LLMNode(Node):
     def execute(
         self, input_data: Union[str, List[str], pd.DataFrame]
     ) -> Union[str, List[str]]:
-        assert (
-            "template" in self.config
-        ), "LLM node must have a 'template' configuration."
-
         llm_call = self.functions["llm_call"]
+        num_threads = self.config.get("num_threads", 1)
+        assert num_threads >= 1, "Number of threads must be at least 1."
+        if num_threads > 1:
+            log.info(f"Using {num_threads} threads for LLM Node.")
+
         if isinstance(input_data, pd.DataFrame):
             if "input_column" not in self.config:
                 raise ValueError(
                     "LLM node must have an 'input_column' configuration for DataFrames."
                 )
             texts = input_data[self.config["input_column"]].tolist()
-            return [
-                llm_call(self.config["template"].format(input=text)) for text in texts
-            ]
+            log.info(f"Using column {self.config['input_column']} as input.")
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+                results = list(executor.map(lambda text: llm_call(self.config["template"].format(input=text)), texts))
+
+            return results
         elif isinstance(input_data, list):
-            return [
-                llm_call(self.config["template"].format(input=text))
-                for text in input_data
-            ]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+                results = list(executor.map(lambda text: llm_call(self.config["template"].format(input=text)), input_data))
+            return results
         else:
             return llm_call(self.config["template"].format(input=input_data))
 
@@ -121,9 +126,18 @@ class LLMFilterNode(Node):
     def execute(self, input_data: pd.DataFrame) -> Union[pd.DataFrame, pd.Series]:
         is_dataframe = isinstance(input_data, pd.DataFrame)
         assert is_dataframe, "LLMFilter node must have a DataFrame as input."
+        num_threads = self.config.get("num_threads", 1)
+        assert num_threads >= 1, "Number of threads must be at least 1."
+        if num_threads > 1:
+            log.info(f"Using {num_threads} threads for LLMFilter Node.")
 
         llm_filter = self.functions["llm_filter"]
-        return llm_filter(input_data, self.config["column"], self.config["prompt"])
+        return llm_filter(
+            input_data,
+            self.config["column"],
+            self.config["prompt"],
+            num_threads=num_threads,
+        )
 
     def validate_config(self) -> bool:
         assert (
@@ -289,11 +303,19 @@ def read_sql(query: str, connection_string: str) -> pd.DataFrame:
     return results
 
 
-def llm_filter(df: pd.DataFrame, column: str, prompt: str) -> pd.DataFrame:
+def llm_filter(df: pd.DataFrame, column: str, prompt: str, num_threads: int = 1) -> pd.DataFrame:
     """Helper function to filter a DataFrame using an LLM yes/no question."""
-    results = df[column].apply(
-        lambda value: openai_call(prompt + "\n\n----\n\n" + value)
-    )
+    if num_threads == 1:
+        results = df[column].apply(
+            lambda value: openai_call(prompt + "\n\n----\n\n" + value)
+        )
+    else:
+        results = apply_io_bound_function(
+            df,
+            lambda value: openai_call(prompt + "\n\n----\n\n" + value),
+            text_column=column,
+            num_threads=num_threads
+        )
     return df[results.str.lower() == "yes"]
 
 
@@ -338,19 +360,26 @@ class WordcelDAG:
         if secrets_file is not None:
             self.secrets = WordcelDAG.load_secrets(secrets_file)
 
-        # Register default nodes
+        # Register default nodes.
         NodeRegistry.register_default_nodes()
 
-        # Register custom nodes if provided
+        # Register custom nodes if provided.
         if custom_nodes:
             for node_type, node_class in custom_nodes.items():
                 NodeRegistry.register(node_type, node_class)
 
-        self.graph = self.create_graph()
-        self.nodes = self.create_nodes()
+        # Register custom functions.
         self.functions = self.default_functions
         if custom_functions:
+            # Assert that the custom functions do not override the defaults.
+            for key, value in custom_functions.items():
+                if key in self.default_functions:
+                    raise ValueError(f"Custom function {key} overrides default function.")
+
             self.functions.update(custom_functions)
+        
+        self.graph = self.create_graph()
+        self.nodes = self.create_nodes()
 
     @property
     def default_functions(self) -> Dict[str, Callable]:
