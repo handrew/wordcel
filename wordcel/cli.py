@@ -1,8 +1,15 @@
 """CLI for Wordcel."""
+
 import os
-import importlib.util
+import logging
 import click
 from rich import print
+from wordcel.dag.utils import create_custom_functions_from_file
+from wordcel.dag.utils import create_custom_nodes_from_file
+from wordcel.dag.utils import create_custom_backends_from_file
+
+log: logging.Logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 PIPELINE_TEMPLATE = """
 dag:
@@ -41,12 +48,40 @@ nodes:
 """
 
 
-def load_module(file_path, module_name):
-    """Load a Python module from a file."""
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def initialize_dag(
+    pipeline_file,
+    secrets_file=None,
+    custom_nodes=None,
+    custom_functions=None,
+    custom_backends=None,
+):
+    """Initialize the DAG."""
+    from wordcel.dag import WordcelDAG
+
+    if custom_nodes:
+        custom_nodes = create_custom_nodes_from_file(custom_nodes)
+        print("Created custom nodes:")
+        print(custom_nodes)
+
+    if custom_functions:
+        custom_functions = create_custom_functions_from_file(custom_functions)
+        print("Created custom functions:")
+        print(custom_functions)
+
+    if custom_backends:
+        custom_backends = create_custom_backends_from_file(custom_backends)
+        print("Created custom backends:")
+        print(custom_backends)
+
+    dag = WordcelDAG(
+        pipeline_file,
+        secrets_file=secrets_file,
+        custom_nodes=custom_nodes,
+        custom_functions=custom_functions,
+        custom_backends=custom_backends,
+    )
+
+    return dag
 
 
 @click.group()
@@ -86,6 +121,17 @@ def list_node_types():
 
 @dag.command()
 @click.argument("pipeline_file")
+@click.argument("save_path")
+@click.option("--custom-nodes", default=None, help="Path to custom nodes Python file.")
+def visualize(pipeline_file, save_path, custom_nodes):
+    """Visualize a pipeline."""
+    dag = initialize_dag(pipeline_file, secrets_file=None, custom_nodes=custom_nodes)
+    log.info("Saving visualization to %s.", save_path)
+    dag.save_image(save_path)
+
+
+@dag.command()
+@click.argument("pipeline_file")
 @click.option("--secrets", default=None, help="Path to secrets file.")
 @click.option("--custom-nodes", default=None, help="Path to custom nodes Python file.")
 @click.option(
@@ -106,40 +152,24 @@ def execute(
     verbose,
 ):
     """Execute a pipeline."""
-    from wordcel.dag import WordcelDAG
-    from wordcel.dag.nodes import Node
-    from wordcel.dag.backends import Backend
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.tree import Tree
 
-    if custom_nodes:
-        nodes_module = load_module(custom_nodes, "custom_nodes")
-        custom_nodes = {name: cls for name, cls in nodes_module.__dict__.items() if isinstance(cls, type) and issubclass(cls, Node) and cls is not Node}
-        print("Created custom nodes:")
-        print(custom_nodes)
-
-    if custom_functions:
-        functions_module = load_module(custom_functions, "custom_functions")
-        custom_functions = {name: func for name, func in functions_module.__dict__.items() if callable(func)}
-        print("Created custom functions:")
-        print(custom_functions)
-
-    if custom_backends:
-        backends_module = load_module(custom_backends, "custom_backends")
-        custom_backends = {name: cls for name, cls in backends_module.__dict__.items() if isinstance(cls, type) and issubclass(cls, Backend) and cls is not Backend}
-        print("Created custom backends:")
-        print(custom_backends)
-
-    dag = WordcelDAG(
-        pipeline_file,
-        secrets_file=secrets,
-        custom_nodes=custom_nodes,
-        custom_functions=custom_functions,
-        custom_backends=custom_backends,
+    dag = initialize_dag(
+        pipeline_file, secrets, custom_nodes, custom_functions, custom_backends
     )
     results = dag.execute()
 
     if verbose:
-        print("DAG Execution Results:")
-        print(results)
+        console = Console()
+        tree = Tree("⚡️ [bold blue]Execution Results")
+
+        for node_id, result in results.items():
+            node_tree = tree.add(f"[bold green]{node_id}")
+            node_tree.add(f"{result}")
+
+        console.print(Panel(tree, expand=False, border_style="bold"))
 
     if visualization:
         dag.save_image(visualization)
