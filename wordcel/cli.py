@@ -1,9 +1,8 @@
 """CLI for Wordcel."""
 import os
-import pprint
+import importlib.util
 import click
-from wordcel.dag import WordcelDAG
-
+from rich import print
 
 PIPELINE_TEMPLATE = """
 dag:
@@ -41,6 +40,15 @@ nodes:
 #     input: process_filtered
 """
 
+
+def load_module(file_path, module_name):
+    """Load a Python module from a file."""
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 @click.group()
 def main():
     """Wordcel CLI."""
@@ -71,6 +79,7 @@ def new(pipeline_file):
 def list_node_types():
     """List available node types."""
     from wordcel.dag.nodes import NODE_TYPES
+
     for node_type, node_class in NODE_TYPES.items():
         click.echo(f"- {node_type}: {node_class.description}")
 
@@ -78,17 +87,59 @@ def list_node_types():
 @dag.command()
 @click.argument("pipeline_file")
 @click.option("--secrets", default=None, help="Path to secrets file.")
+@click.option("--custom-nodes", default=None, help="Path to custom nodes Python file.")
+@click.option(
+    "--custom-functions", default=None, help="Path to custom functions Python file."
+)
+@click.option(
+    "--custom-backends", default=None, help="Path to custom backends Python file."
+)
 @click.option("--visualization", default=None, help="Path to save visualization.")
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output.")
-def execute(pipeline_file, secrets, visualization, verbose):
+def execute(
+    pipeline_file,
+    secrets,
+    custom_nodes,
+    custom_functions,
+    custom_backends,
+    visualization,
+    verbose,
+):
     """Execute a pipeline."""
-    dag = WordcelDAG(pipeline_file, secrets)
+    from wordcel.dag import WordcelDAG
+    from wordcel.dag.nodes import Node
+    from wordcel.dag.backends import Backend
+
+    if custom_nodes:
+        nodes_module = load_module(custom_nodes, "custom_nodes")
+        custom_nodes = {name: cls for name, cls in nodes_module.__dict__.items() if isinstance(cls, type) and issubclass(cls, Node) and cls is not Node}
+        print("Created custom nodes:")
+        print(custom_nodes)
+
+    if custom_functions:
+        functions_module = load_module(custom_functions, "custom_functions")
+        custom_functions = {name: func for name, func in functions_module.__dict__.items() if callable(func)}
+        print("Created custom functions:")
+        print(custom_functions)
+
+    if custom_backends:
+        backends_module = load_module(custom_backends, "custom_backends")
+        custom_backends = {name: cls for name, cls in backends_module.__dict__.items() if isinstance(cls, type) and issubclass(cls, Backend) and cls is not Backend}
+        print("Created custom backends:")
+        print(custom_backends)
+
+    dag = WordcelDAG(
+        pipeline_file,
+        secrets_file=secrets,
+        custom_nodes=custom_nodes,
+        custom_functions=custom_functions,
+        custom_backends=custom_backends,
+    )
     results = dag.execute()
 
     if verbose:
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint("DAG Execution Results:")
-        pp.pprint(results)
+        print("DAG Execution Results:")
+        print(results)
 
     if visualization:
         dag.save_image(visualization)
