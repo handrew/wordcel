@@ -147,6 +147,8 @@ class WordcelDAG:
 
         pos = nx.multipartite_layout(self.graph, subset_key=subset_key)
         nx.draw_networkx(self.graph, with_labels=True, pos=pos)
+        # Make the image LARGE!
+        plt.gcf().set_size_inches(18.5, 10.5)
         plt.savefig(path)
         plt.close()
 
