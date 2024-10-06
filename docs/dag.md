@@ -98,7 +98,25 @@ Required:
 - `path`: The file path to the CSV file.
 
 Optional:
-- `None` specific to this node.
+- None specific to this node.
+
+### `json` JSONNode
+
+Required:
+- `path`: The file path to the JSON file.
+
+Optional:
+- None specific to this node.
+
+
+### `json_dataframe` JSONDataFrameNode
+
+Required:
+- `path`: The file path to the JSON file.
+
+Optional:
+- `read_json_kwargs`: A dictionary of keyword arguments to pass to `pd.read_json()`.
+
 
 ### `sql` SQLNode
 

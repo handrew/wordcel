@@ -1,4 +1,5 @@
 """Node definitions."""
+import json
 import subprocess
 import pandas as pd
 import logging
@@ -52,6 +53,29 @@ class CSVNode(Node):
 
     def validate_config(self) -> bool:
         assert "path" in self.config, "CSV node must have a 'path' configuration."
+        return True
+
+
+class JSONNode(Node):
+    """Node to read a JSON file."""
+
+    def execute(self, input_data: Any) -> Dict[str, Any]:
+        with open(self.config["path"], "r") as file:
+            return json.load(file)
+
+    def validate_config(self) -> bool:
+        assert "path" in self.config, "JSON node must have a 'path' configuration."
+        return True
+
+
+class JSONDataFrameNode(Node):
+    """Node to read a JSON file into a pandas DataFrame."""
+
+    def execute(self, input_data: Any) -> pd.DataFrame:
+        return pd.read_json(self.config["path"], **self.config.get("read_json_kwargs", {}))
+
+    def validate_config(self) -> bool:
+        assert "path" in self.config, "JSONDataFrame node must have a 'path' configuration."
         return True
 
 
@@ -283,6 +307,8 @@ class DAGNode(Node):
 
 NODE_TYPES: Dict[str, Type[Node]] = {
     "csv": CSVNode,
+    "json": JSONNode,
+    "json_dataframe": JSONDataFrameNode,
     "sql": SQLNode,
     "llm": LLMNode,
     "llm_filter": LLMFilterNode,
