@@ -87,6 +87,7 @@ class WordcelDAG:
 
         # Create the backend.
         backend_type = self.backend_config.get("type") if self.backend_config else None
+        self.backend = None
         if backend_type:
             assert (
                 BackendRegistry.get(backend_type) is not None
