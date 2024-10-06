@@ -69,12 +69,12 @@ def new(pipeline_file):
 
 @dag.command()
 @click.argument("pipeline_file")
-@click.option("--secrets_file", default=None, help="Path to secrets file.")
+@click.option("--secrets", default=None, help="Path to secrets file.")
 @click.option("--visualization", default=None, help="Path to save visualization.")
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output.")
-def execute(pipeline_file, secrets_file, visualization, verbose):
+def execute(pipeline_file, secrets, visualization, verbose):
     """Execute a pipeline."""
-    dag = WordcelDAG(pipeline_file, secrets_file)
+    dag = WordcelDAG(pipeline_file, os.path.expanduser(secrets))
     results = dag.execute()
 
     if verbose:

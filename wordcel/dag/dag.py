@@ -138,7 +138,7 @@ class WordcelDAG:
 
     def save_image(self, path: str) -> None:
         """Save an image of the DAG using graph.draw."""
-        pos = nx.multipartite_layout(G, subset_key="layer")
+        pos = nx.multipartite_layout(self.graph, subset_key="layer")
         nx.draw_networkx(self.graph, with_labels=True, pos=pos)
         plt.savefig(path)
         plt.close()
