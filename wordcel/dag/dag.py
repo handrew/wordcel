@@ -138,7 +138,14 @@ class WordcelDAG:
 
     def save_image(self, path: str) -> None:
         """Save an image of the DAG using graph.draw."""
-        pos = nx.multipartite_layout(self.graph, subset_key="layer")
+        subset_key = "__wordcel_dag_layer__"
+        # `multipartite_layout` expects the layer as a node attribute, so add the
+        # numeric layer value as a node attribute
+        for layer, node in enumerate(nx.topological_generations(self.graph)):
+            for n in node:
+                self.graph.nodes[n][subset_key] = layer
+
+        pos = nx.multipartite_layout(self.graph, subset_key=subset_key)
         nx.draw_networkx(self.graph, with_labels=True, pos=pos)
         plt.savefig(path)
         plt.close()

@@ -74,7 +74,7 @@ def new(pipeline_file):
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output.")
 def execute(pipeline_file, secrets, visualization, verbose):
     """Execute a pipeline."""
-    dag = WordcelDAG(pipeline_file, os.path.expanduser(secrets))
+    dag = WordcelDAG(pipeline_file, secrets)
     results = dag.execute()
 
     if verbose:
