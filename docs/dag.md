@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../assets/tree_of_life.jpg" height="400" />
+</p>
+
 # WordcelDAG Documentation
 
 ## Overview
@@ -21,6 +25,8 @@ While great projects in their own right, none of the above quite provided what I
 
 ## Basic Usage
 
+### Running in Python
+
 1. Define your DAG in a YAML file.
 2. Create a WordcelDAG instance.
 3. Execute the DAG.
@@ -30,6 +36,23 @@ from wordcel.dag import WordcelDAG
 
 dag = WordcelDAG("path/to/your/dag.yaml", "path/to/your/secrets.yaml")
 results = dag.execute()
+```
+
+### Running with the CLI
+
+There is a CLI! `wordcel dag --help`:
+
+```
+Usage: wordcel dag [OPTIONS] COMMAND [ARGS]...
+
+  WordcelDAG commands.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  execute  Execute a pipeline.
+  new      Create a new pipeline.
 ```
 
 ## DAG Configuration (YAML)

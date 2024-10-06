@@ -43,7 +43,7 @@ nodes:
 
 @click.group()
 def main():
-    """Pipeline CLI."""
+    """Wordcel CLI."""
     pass
 
 
