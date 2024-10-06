@@ -1,4 +1,5 @@
 """DAG definition and node implementations."""
+
 import json
 import logging
 import yaml
@@ -23,7 +24,9 @@ def create_node(
     node_type = node_config.get("type")
     node_class = NodeRegistry.get(node_type)
     if node_class is None:
-        raise ValueError(f"Unknown node type: {node_type}.")
+        raise ValueError(
+            f"Unknown node type: {node_type}. You likely forgot to define its `type`, or have it listed as an input somewhere without first creating the node."
+        )
 
     node = node_class(node_config, secrets, custom_functions=custom_functions)
     node.validate_config()
@@ -108,8 +111,10 @@ class WordcelDAG:
     def load_secrets(secrets_file: str) -> Dict[str, str]:
         """Load a secrets file."""
         return WordcelDAG.load_yaml(secrets_file)
-    
-    def _register_default_and_custom_functions(self, custom_functions: Dict[str, Callable] = None) -> None:
+
+    def _register_default_and_custom_functions(
+        self, custom_functions: Dict[str, Callable] = None
+    ) -> None:
         """Register custom functions."""
         self.functions = self.default_functions
         if custom_functions:
@@ -122,14 +127,18 @@ class WordcelDAG:
 
             self.functions.update(custom_functions)
 
-    def _register_default_and_custom_nodes(self, custom_nodes: Dict[str, Type[Node]] = None) -> None:
+    def _register_default_and_custom_nodes(
+        self, custom_nodes: Dict[str, Type[Node]] = None
+    ) -> None:
         """Register custom nodes."""
         NodeRegistry.register_default_nodes()
         if custom_nodes:
             for node_type, node_class in custom_nodes.items():
                 NodeRegistry.register(node_type, node_class)
 
-    def _register_default_and_custom_backends(self, custom_backends: Dict[str, Type[Backend]] = None) -> None:
+    def _register_default_and_custom_backends(
+        self, custom_backends: Dict[str, Type[Backend]] = None
+    ) -> None:
         """Register custom backends."""
         BackendRegistry.register_default_backends()
         if custom_backends:
