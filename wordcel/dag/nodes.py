@@ -1,5 +1,6 @@
 """Node definitions."""
 import json
+import yaml
 import subprocess
 import pandas as pd
 import logging
@@ -53,6 +54,18 @@ class CSVNode(Node):
 
     def validate_config(self) -> bool:
         assert "path" in self.config, "CSV node must have a 'path' configuration."
+        return True
+    
+
+class YAMLNode(Node):
+    description = """Node to read a YAML file."""
+
+    def execute(self, input_data: Any) -> Dict[str, Any]:
+        with open(self.config["path"], "r") as file:
+            return yaml.safe_load(file)
+
+    def validate_config(self) -> bool:
+        assert "path" in self.config, "YAML node must have a 'path' configuration."
         return True
 
 
@@ -307,6 +320,7 @@ class DAGNode(Node):
 
 NODE_TYPES: Dict[str, Type[Node]] = {
     "csv": CSVNode,
+    "yaml": YAMLNode,
     "json": JSONNode,
     "json_dataframe": JSONDataFrameNode,
     "sql": SQLNode,
