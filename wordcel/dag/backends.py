@@ -42,7 +42,7 @@ class LocalBackend(Backend):
     def __init__(self, config: Dict[str, Any]):
         """Initialize the local backend."""
         # Check for the cache directory.
-        cache_dir = config.get("cache_dir")
+        cache_dir = os.path.expanduser(config.get("cache_dir"))
         if not cache_dir:
             raise ValueError("Local backend requires a `cache_dir`.")
         self.cache_dir = cache_dir
