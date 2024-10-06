@@ -59,7 +59,7 @@ class SQLNode(Node):
     """Node to execute a SQL query."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
-        connection_string = f"postgresql://{self.secrets['db_user']}:{self.secrets['db_password']}@{self.secrets['db_host']}/{self.secrets['db_name']}"
+        connection_string = self.secrets["database_url"]
         read_sql_fn = self.functions.get("read_sql", read_sql)
         return read_sql_fn(self.config["query"], connection_string)
 
