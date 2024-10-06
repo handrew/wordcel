@@ -68,6 +68,14 @@ def new(pipeline_file):
 
 
 @dag.command()
+def list_node_types():
+    """List available node types."""
+    from wordcel.dag.nodes import NODE_TYPES
+    for node_type, node_class in NODE_TYPES.items():
+        click.echo(f"- {node_type}: {node_class.description}")
+
+
+@dag.command()
 @click.argument("pipeline_file")
 @click.option("--secrets", default=None, help="Path to secrets file.")
 @click.option("--visualization", default=None, help="Path to save visualization.")

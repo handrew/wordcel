@@ -46,7 +46,7 @@ class Node(ABC):
 
 
 class CSVNode(Node):
-    """Node to read a CSV file."""
+    description = """Node to read a CSV file."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         return pd.read_csv(self.config["path"])
@@ -57,7 +57,7 @@ class CSVNode(Node):
 
 
 class JSONNode(Node):
-    """Node to read a JSON file."""
+    description = """Node to read a JSON file."""
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
         with open(self.config["path"], "r") as file:
@@ -69,7 +69,7 @@ class JSONNode(Node):
 
 
 class JSONDataFrameNode(Node):
-    """Node to read a JSON file into a pandas DataFrame."""
+    description = """Node to read a JSON file into a pandas DataFrame."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         return pd.read_json(self.config["path"], **self.config.get("read_json_kwargs", {}))
@@ -80,7 +80,7 @@ class JSONDataFrameNode(Node):
 
 
 class SQLNode(Node):
-    """Node to execute a SQL query."""
+    description = """Node to execute a SQL query."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         connection_string = self.secrets["database_url"]
@@ -95,7 +95,7 @@ class SQLNode(Node):
 
 
 class LLMNode(Node):
-    """Node to query an LLM API with a template. If given a string, it
+    description = """Node to query an LLM API with a template. If given a string, it
     will fill in the template and return the result. If given a DataFrame,
     it will turn the `input_column` into a list of strings, fill in the
     template for each string, and return a list of results."""
@@ -154,7 +154,7 @@ class LLMNode(Node):
 
 
 class LLMFilterNode(Node):
-    """Node to use LLMs to filter a dataframe."""
+    description = """Node to use LLMs to filter a dataframe."""
 
     def execute(self, input_data: pd.DataFrame) -> Union[pd.DataFrame, pd.Series]:
         is_dataframe = isinstance(input_data, pd.DataFrame)
@@ -186,7 +186,7 @@ class LLMFilterNode(Node):
 
 
 class FileWriterNode(Node):
-    """Node to write data to a file."""
+    description = """Node to write data to a file."""
 
     def execute(self, input_data: str) -> str:
         with open(self.config["path"], "w") as file:
@@ -202,7 +202,7 @@ class FileWriterNode(Node):
 
 
 class DataFrameOperationNode(Node):
-    """Node to apply a DataFrame operation to the input data."""
+    description = """Node to apply a DataFrame operation to the input data."""
 
     def execute(
         self, input_data: Union[pd.DataFrame, List[pd.DataFrame]]
@@ -248,7 +248,7 @@ class DataFrameOperationNode(Node):
 
 
 class PythonScriptNode(Node):
-    """Node to execute a Python script using subprocess."""
+    description = """Node to execute a Python script using subprocess."""
 
     def execute(self, input_data: Any) -> Any:
         script_path = self.config["script_path"]
@@ -281,7 +281,7 @@ class PythonScriptNode(Node):
 
 
 class DAGNode(Node):
-    """Node to execute a sub-DAG defined in a YAML file."""
+    description = """Node to execute a sub-DAG defined in a YAML file."""
 
     def execute(self, input_data: Any) -> Any:
         from .dag import WordcelDAG
