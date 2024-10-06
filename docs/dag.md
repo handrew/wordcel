@@ -26,7 +26,7 @@ While great projects in their own right, none of the above quite provided what I
 3. Execute the DAG.
 
 ```python
-from wordceldag import WordcelDAG
+from wordcel.dag import WordcelDAG
 
 dag = WordcelDAG("path/to/your/dag.yaml", "path/to/your/secrets.yaml")
 results = dag.execute()
@@ -150,7 +150,7 @@ To create a custom node type:
 Example:
 
 ```python
-from wordceldag import Node, NodeRegistry
+from wordcel.dag import Node, NodeRegistry
 
 class MyCustomNode(Node):
     def execute(self, input_data):
