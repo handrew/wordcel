@@ -66,7 +66,7 @@ class LocalBackend(Backend):
         with open(self._get_path(key), "r") as f:
             data = json.load(f)
             # Check for the flag indicating a DataFrame.
-            if "__dataframe__" in data:
+            if data is not None and "__dataframe__" in data:
                 data = pd.read_json(StringIO(data["data"]))
             return data
 
