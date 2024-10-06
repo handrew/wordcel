@@ -138,9 +138,10 @@ class WordcelDAG:
 
     def save_image(self, path: str) -> None:
         """Save an image of the DAG using graph.draw."""
-        nx.draw(self.graph, with_labels=True, font_weight="bold")
+        pos = nx.multipartite_layout(G, subset_key="layer")
+        nx.draw_networkx(self.graph, with_labels=True, pos=pos)
         plt.savefig(path)
-        plt.close
+        plt.close()
 
     def create_graph(self) -> nx.DiGraph:
         G = nx.DiGraph()
