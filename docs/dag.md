@@ -63,14 +63,16 @@ nodes:
 
 ## Built-in Node Types
 
-1. CSVNode: Read CSV files
-2. SQLNode: Execute SQL queries
-3. LLMNode: Query Language Models
-4. LLMFilterNode: Filter data using Language Models
-5. FileWriterNode: Write data to files
-6. DataFrameOperationNode: Perform operations on DataFrames
-7. PythonScriptNode: Execute Python scripts
-8. DAGNode: Execute sub-DAGs
+1. `csv` CSVNode: Read CSV files
+2. `sql` SQLNode: Execute SQL queries
+3. `llm` LLMNode: Query Language Models
+4. `llm_filter` LLMFilterNode: Filter data using Language Models
+5. `file_writer` FileWriterNode: Write data to files
+6. `dataframe_operation` DataFrameOperationNode: Perform operations on DataFrames
+7. `python_script` PythonScriptNode: Execute Python scripts
+8. `dag` DAGNode: Execute sub-DAGs
+
+Some examples can be found in the `tests` folder. TODO will provide the constructors for each here soon. 
 
 ## Defining Custom Nodes
 
