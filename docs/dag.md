@@ -63,16 +63,81 @@ nodes:
 
 ## Built-in Node Types
 
-1. `csv` CSVNode: Read CSV files
-2. `sql` SQLNode: Execute SQL queries
-3. `llm` LLMNode: Query Language Models
-4. `llm_filter` LLMFilterNode: Filter data using Language Models
-5. `file_writer` FileWriterNode: Write data to files
-6. `dataframe_operation` DataFrameOperationNode: Perform operations on DataFrames
-7. `python_script` PythonScriptNode: Execute Python scripts
-8. `dag` DAGNode: Execute sub-DAGs
+Some examples can be found in the `tests` folder.
 
-Some examples can be found in the `tests` folder. TODO will provide the constructors for each here soon. 
+General optional parameters for all nodes:
+- id: A unique identifier for the node (if not provided, it will be auto-generated).
+- inputs: List of input node ids (for nodes that accept input from other nodes).
+
+### `csv` CSVNode
+
+Required:
+- `path`: The file path to the CSV file.
+
+Optional:
+- `None` specific to this node.
+
+### `sql` SQLNode
+
+Required:
+- `query`: The SQL query to execute.
+
+Optional:
+- `None` specific to this node, but requires database connection details in secrets.
+
+### `llm` LLMNode
+
+Required:
+- `template`: The prompt template for the LLM.
+
+Optional:
+- `input_column`: The column name to use as input when processing a DataFrame.
+- num_threads: Number of threads for parallel processing (default: 1).
+
+### `llm_filter` LLMFilterNode
+
+Required:
+- `column`: The column to apply the filter on.
+- prompt: The prompt to use for filtering.
+- input: The input node (must be a single input).
+
+Optional:
+- `num_threads`: Number of threads for parallel processing (default: 1).
+
+### `file_writer` FileWriterNode
+
+Required:
+- `path`: The file path to write the output.
+
+Optional:
+- `None` specific to this node.
+
+### `dataframe_operation` DataFrameOperationNode
+
+Required:
+- `operation`: The DataFrame operation to perform.
+
+Optional:
+- `args`: List of positional arguments for the operation.
+- kwargs: Dictionary of keyword arguments for the operation.
+
+### `python_script` PythonScriptNode
+
+Required:
+- `script_path`: The path to the Python script to execute.
+
+Optional:
+- `args`: List of command-line arguments to pass to the script.
+
+### `dag` DAGNode
+
+Required:
+- `path`: The path to the YAML file defining the sub-DAG.
+
+Optional:
+- `secrets_path`: The path to the secrets file for the sub-DAG.
+
+
 
 ## Defining Custom Nodes
 
