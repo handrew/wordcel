@@ -54,7 +54,7 @@ class LocalBackend(Backend):
     def save(self, key: str, data: Any) -> None:
         """Save data or DataFrame to a JSON file."""
         if isinstance(data, pd.DataFrame):
-            data = data.to_json()
+            data = data.to_json(orient="records")
             # Add a flag to indicate that the data is a DataFrame.
             data = {"__dataframe__": True, "data": data}
 
