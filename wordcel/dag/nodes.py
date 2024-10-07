@@ -265,33 +265,44 @@ class PythonScriptNode(Node):
     description = """Node to execute a Python script using subprocess."""
 
     def execute(self, input_data: Any) -> Any:
-        script_path = self.config["script_path"]
+        script_path = shlex.quote(self.config["script_path"])
         args = self.config.get("args", [])
 
-        # If input_data is a DataFrame, convert it to a CSV string
-        if isinstance(input_data, pd.DataFrame):
-            input_data = input_data.to_csv(index=False)
-
-        # Prepare the command and escape the arguments.
+        # Prepare the command
         command = ["python", script_path]
+
+        # Handle input_data
+        if input_data is not None:
+            if isinstance(input_data, pd.DataFrame):
+                # Convert DataFrame to JSON string
+                input_json = input_data.to_json(orient="records")
+                command.extend(["--input", shlex.quote(input_json)])
+            elif isinstance(input_data, (list, dict)):
+                # Convert list or dict to JSON string
+                input_json = json.dumps(input_data)
+                command.extend(["--input", shlex.quote(input_json)])
+            else:
+                # For other types, convert to string
+                command.extend(["--input", shlex.quote(str(input_data))])
+
+        # Add args from YAML config
         if args:
-            safe_args = [shlex.quote(arg) for arg in args]
-            command.extend(safe_args)
-            
-        # Execute the script.
+            for arg in args:
+                if isinstance(arg, dict):
+                    for k, v in arg.items():
+                        command.extend([f"--{shlex.quote(k)}", shlex.quote(str(v))])
+                else:
+                    command.append(shlex.quote(str(arg)))
+
+        # Execute the script
         try:
-            result = subprocess.run(command)
+            result = subprocess.run(command, shell=False)
             return result.stdout
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"Script execution failed: {e.stderr}")
 
-        # Simply pass through the input data.
-        return input_data
-
     def validate_config(self) -> bool:
-        assert (
-            "script_path" in self.config
-        ), "PythonScriptNode must have a 'script_path' configuration."
+        assert "script_path" in self.config, "PythonScript node must have a 'script_path' configuration."
         return True
 
 
