@@ -54,7 +54,7 @@ class CSVNode(Node):
         return pd.read_csv(self.config["path"])
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "CSV node must have a 'path' configuration."
+        assert "path" in self.config, "CSVNode must have a 'path' configuration."
         return True
     
 
@@ -66,7 +66,7 @@ class YAMLNode(Node):
             return yaml.safe_load(file)
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "YAML node must have a 'path' configuration."
+        assert "path" in self.config, "YAMLNode must have a 'path' configuration."
         return True
 
 
@@ -78,7 +78,7 @@ class JSONNode(Node):
             return json.load(file)
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "JSON node must have a 'path' configuration."
+        assert "path" in self.config, "JSONNode must have a 'path' configuration."
         return True
 
 
@@ -89,7 +89,7 @@ class JSONDataFrameNode(Node):
         return pd.read_json(self.config["path"], **self.config.get("read_json_kwargs", {}))
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "JSONDataFrame node must have a 'path' configuration."
+        assert "path" in self.config, "JSONDataFrameNode must have a 'path' configuration."
         return True
 
 
@@ -104,7 +104,7 @@ class SQLNode(Node):
     def validate_config(self) -> bool:
         assert (
             "query" in self.config and "database_url" in self.secrets
-        ), "SQL node must have a 'query' configuration and a 'database_url' secret."
+        ), "SQLNode must have a 'query' configuration and a 'database_url' secret."
         return True
 
 
@@ -126,7 +126,7 @@ class LLMNode(Node):
         if isinstance(input_data, pd.DataFrame):
             if "input_column" not in self.config:
                 raise ValueError(
-                    "LLM node must have an 'input_column' configuration for DataFrames."
+                    "LLMNode must have an 'input_column' configuration for DataFrames."
                 )
             texts = input_data[self.config["input_column"]].tolist()
             log.info(f"Using column {self.config['input_column']} as input.")
@@ -163,7 +163,7 @@ class LLMNode(Node):
     def validate_config(self) -> bool:
         assert (
             "template" in self.config
-        ), "LLM node must have a 'template' configuration."
+        ), "LLMNode must have a 'template' configuration."
         return True
 
 
@@ -172,7 +172,7 @@ class LLMFilterNode(Node):
 
     def execute(self, input_data: pd.DataFrame) -> Union[pd.DataFrame, pd.Series]:
         is_dataframe = isinstance(input_data, pd.DataFrame)
-        assert is_dataframe, "LLMFilter node must have a DataFrame as input."
+        assert is_dataframe, "LLMFilterNode must have a DataFrame as input."
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
         if num_threads > 1:
@@ -189,10 +189,10 @@ class LLMFilterNode(Node):
     def validate_config(self) -> bool:
         assert (
             "column" in self.config and "prompt" in self.config
-        ), "LLMFilter node must have 'column' and 'prompt' configuration."
+        ), "LLMFilterNode must have 'column' and 'prompt' configuration."
         assert (
             "input" in self.config
-        ), "LLMFilter node must have an 'input' configuration."
+        ), "LLMFilterNode must have an 'input' configuration."
         assert isinstance(
             self.config["input"], str
         ), "LLMFilter node 'input' configuration must have only one input."
@@ -211,7 +211,7 @@ class FileWriterNode(Node):
     def validate_config(self) -> bool:
         assert (
             "path" in self.config
-        ), "FileWriter node must have a 'path' configuration."
+        ), "FileWriterNode must have a 'path' configuration."
         return True
 
 
@@ -257,7 +257,7 @@ class DataFrameOperationNode(Node):
     def validate_config(self) -> bool:
         assert (
             "operation" in self.config
-        ), "DataFrameOperation node must have an 'operation' configuration."
+        ), "DataFrameOperationNode must have an 'operation' configuration."
         return True
 
 
@@ -291,7 +291,7 @@ class PythonScriptNode(Node):
     def validate_config(self) -> bool:
         assert (
             "script_path" in self.config
-        ), "PythonScript node must have a 'script_path' configuration."
+        ), "PythonScriptNode must have a 'script_path' configuration."
         return True
 
 
@@ -316,7 +316,7 @@ class DAGNode(Node):
         return sub_dag.execute()
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "DAG node must have a 'path' configuration."
+        assert "path" in self.config, "DAGNode must have a 'path' configuration."
         return True
 
 
