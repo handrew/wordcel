@@ -1,5 +1,6 @@
 """Node definitions."""
 import json
+import shlex
 import yaml
 import subprocess
 import pandas as pd
@@ -271,14 +272,15 @@ class PythonScriptNode(Node):
         if isinstance(input_data, pd.DataFrame):
             input_data = input_data.to_csv(index=False)
 
-        # Prepare the command.
-        command = "python " + script_path
+        # Prepare the command and escape the arguments.
+        command = ["python", script_path]
         if args:
-            command += " " + " ".join(args)
-
+            safe_args = [shlex.quote(arg) for arg in args]
+            command.extend(safe_args)
+            
         # Execute the script.
         try:
-            result = subprocess.run(command, shell=True)
+            result = subprocess.run(command)
             return result.stdout
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"Script execution failed: {e.stderr}")
