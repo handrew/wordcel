@@ -43,6 +43,7 @@ results = dag.execute()
 There is a CLI! `wordcel dag --help`:
 
 ```
+
 Usage: wordcel dag [OPTIONS] COMMAND [ARGS]...
 
   WordcelDAG commands.
@@ -51,8 +52,10 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  execute  Execute a pipeline.
-  new      Create a new pipeline.
+  execute          Execute a pipeline.
+  list-node-types  List available node types.
+  new              Create a new pipeline.
+  visualize        Visualize a pipeline.
 ```
 
 ## DAG Configuration (YAML)
