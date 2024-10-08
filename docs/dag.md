@@ -43,7 +43,6 @@ results = dag.execute()
 There is a CLI! `wordcel dag --help`:
 
 ```
-
 Usage: wordcel dag [OPTIONS] COMMAND [ARGS]...
 
   WordcelDAG commands.
