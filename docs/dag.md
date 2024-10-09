@@ -38,6 +38,14 @@ dag = WordcelDAG("path/to/your/dag.yaml", "path/to/your/secrets.yaml")
 results = dag.execute()
 ```
 
+You can also give input data to your DAG at runtime.
+
+```python
+results = dag.execute(input_data={"node_id": data})
+```
+
+where `node_id` is the node that `data` is intended for. 
+
 ### Running with the CLI
 
 There is a CLI! `wordcel dag --help`:
@@ -181,6 +189,17 @@ Optional:
 - `secrets_path`: The path to the secrets file for the sub-DAG.
 
 
+## Defining Custom Functions
+
+To create custom functions, simply pass in a dictionary of functions to the constructor. You can them use them in the YAML by indexing the key.
+
+```python
+from wordcel.dag.utils import create_custom_functions_from_files
+
+custom_functions = create_custom_functions_from_files([file_path])
+dag = WordcelDAG("path/to/your/dag.yaml", custom_nodes=custom_functions)
+```
+
 
 ## Defining Custom Nodes
 
@@ -188,7 +207,7 @@ To create a custom node type:
 
 1. Create a new class that inherits from the `Node` base class
 2. Implement the `execute` and `validate_config` methods
-3. Register the custom node type
+3. Pass the custom node type to the constructor. 
 
 Example:
 
@@ -206,6 +225,15 @@ class MyCustomNode(Node):
 
 # Use in your DAG creation
 dag = WordcelDAG("path/to/your/dag.yaml", custom_nodes={"my_custom_node": MyCustomNode})
+```
+
+There is also a utility function to automatically create a dict of custom nodes from a file.
+
+```python
+from wordcel.dag.utils import create_custom_nodes_from_files
+
+custom_nodes = create_custom_nodes_from_files([file_path])
+dag = WordcelDAG("path/to/your/dag.yaml", custom_nodes=custom_nodes)
 ```
 
 ## Backends
@@ -227,8 +255,14 @@ nodes:
   # ... node definitions ...
 ```
 
+Like with custom nodes, you can create custom backends by creating a class that inherits from the Backend class and overriding `save`, `load`, and `exists`. 
 
+```python
+from wordcel.dag.utils import create_custom_backends_from_files
 
+custom_backends = create_custom_backends_from_files([file_path])
+dag = WordcelDAG("path/to/your/dag.yaml", custom_backends=custom_backends)
+```
 
 ## YAML Examples
 

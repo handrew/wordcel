@@ -186,7 +186,11 @@ class WordcelDAG:
         return nodes
 
     def execute(self, input_data: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Execute the DAG."""
+        """Execute the DAG.
+
+        @param input_data: A dictionary of input data for the nodes. The key
+        is the node ID that the input data is for.
+        """
         # Sort and execute the nodes.
         results = {}
 
@@ -198,7 +202,9 @@ class WordcelDAG:
             incoming_edges = self.graph.nodes[node_id].get("input")
             incoming_input = None
             if input_data and node_id in input_data:
-                assert incoming_edges is None, "Node cannot have both `input` and input data given at runtime."
+                assert (
+                    incoming_edges is None
+                ), "Node cannot have both `input` and input data given at runtime."
                 incoming_input = input_data[node_id]
             elif isinstance(incoming_edges, list):
                 incoming_input = [results[input_id] for input_id in incoming_edges]

@@ -127,12 +127,34 @@ def visualize(pipeline_file, save_path, custom_nodes):
 @dag.command()
 @click.argument("pipeline_file")
 @click.option("--secrets", default=None, help="Path to secrets file.")
-@click.option("--custom-nodes", default=None, multiple=True, help="Path to custom nodes Python file.")
-@click.option("--custom-functions", default=None, multiple=True, help="Path to custom functions Python file.")
-@click.option("--custom-backends", default=None, multiple=True, help="Path to custom backends Python file.")
+@click.option(
+    "--custom-nodes",
+    default=None,
+    multiple=True,
+    help="Path to custom nodes Python file.",
+)
+@click.option(
+    "--custom-functions",
+    default=None,
+    multiple=True,
+    help="Path to custom functions Python file.",
+)
+@click.option(
+    "--custom-backends",
+    default=None,
+    multiple=True,
+    help="Path to custom backends Python file.",
+)
 @click.option("--visualization", default=None, help="Path to save visualization.")
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output.")
-@click.option("--input", "-i", nargs=2, type=(str, str), multiple=True, help="Input data for the pipeline.")
+@click.option(
+    "--input",
+    "-i",
+    nargs=2,
+    type=(str, str),
+    multiple=True,
+    help="Input data for the pipeline. Given in the format `-i key value`. The key is the node ID that the input data is for.",
+)
 def execute(
     pipeline_file,
     secrets,
