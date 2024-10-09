@@ -1,0 +1,21 @@
+dag:
+  name: custom_components_test
+
+nodes:
+  - id: input_data
+    type: yaml
+    path: tests/hello.yaml
+
+  - id: uppercase_text
+    type: UppercaseNode
+    input: input_data
+
+  - id: reverse_text
+    type: ReverseStringNode
+    input: uppercase_text
+
+  - id: output_data
+    type: file_writer
+    input: reverse_text
+    path: test_custom_components.txt
+    

@@ -1,0 +1,12 @@
+dag:
+  name: "Input Test DAG"
+
+nodes:
+  - id: greet_user
+    type: llm
+    template: "Hello, {input}! Your name is now {input}. Is that okay with you?"
+
+  - id: save_results
+    type: file_writer
+    input: greet_user
+    path: "output.txt"

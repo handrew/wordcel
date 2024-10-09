@@ -25,7 +25,7 @@ def create_node(
     node_class = NodeRegistry.get(node_type)
     if node_class is None:
         raise ValueError(
-            f"Unknown node type: {node_type}. You likely forgot to define its `type`, or have it listed as an input somewhere without first creating the node."
+            f"Unknown node type: {node_type}. You likely forgot to define its `type`, have it listed as an input somewhere without first creating the node, or haven't given a custom node."
         )
 
     node = node_class(node_config, secrets, custom_functions=custom_functions)
@@ -185,15 +185,22 @@ class WordcelDAG:
                 raise ValueError(f"Error creating node {node_id}: {str(e)}")
         return nodes
 
-    def execute(self) -> Dict[str, Any]:
+    def execute(self, input_data: Dict[str, Any] = None) -> Dict[str, Any]:
         """Execute the DAG."""
         # Sort and execute the nodes.
         results = {}
+
         for node_id in nx.topological_sort(self.graph):
             log.info(f"Executing node `{node_id}` from DAG `{self.name}`.")
             node = self.nodes[node_id]
+
+            # Get the incoming edges.
             incoming_edges = self.graph.nodes[node_id].get("input")
-            if isinstance(incoming_edges, list):
+            incoming_input = None
+            if input_data and node_id in input_data:
+                assert incoming_edges is None, "Node cannot have both `input` and input data given at runtime."
+                incoming_input = input_data[node_id]
+            elif isinstance(incoming_edges, list):
                 incoming_input = [results[input_id] for input_id in incoming_edges]
             else:
                 incoming_input = results.get(incoming_edges)
@@ -212,4 +219,6 @@ class WordcelDAG:
                 if self.backend:
                     log.info(f"Saving node `{node_id}` to cache.")
                     self.backend.save(node_id, results[node_id])
+
+            log.info("Node results: " + results[node_id])
         return results

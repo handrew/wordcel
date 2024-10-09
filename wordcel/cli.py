@@ -4,9 +4,9 @@ import os
 import logging
 import click
 from rich import print
-from wordcel.dag.utils import create_custom_functions_from_file
-from wordcel.dag.utils import create_custom_nodes_from_file
-from wordcel.dag.utils import create_custom_backends_from_file
+from wordcel.dag.utils import create_custom_functions_from_files
+from wordcel.dag.utils import create_custom_nodes_from_files
+from wordcel.dag.utils import create_custom_backends_from_files
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -59,19 +59,13 @@ def initialize_dag(
     from wordcel.dag import WordcelDAG
 
     if custom_nodes:
-        custom_nodes = create_custom_nodes_from_file(custom_nodes)
-        print("Created custom nodes:")
-        print(custom_nodes)
+        custom_nodes = create_custom_nodes_from_files(custom_nodes)
 
     if custom_functions:
-        custom_functions = create_custom_functions_from_file(custom_functions)
-        print("Created custom functions:")
-        print(custom_functions)
+        custom_functions = create_custom_functions_from_files(custom_functions)
 
     if custom_backends:
-        custom_backends = create_custom_backends_from_file(custom_backends)
-        print("Created custom backends:")
-        print(custom_backends)
+        custom_backends = create_custom_backends_from_files(custom_backends)
 
     dag = WordcelDAG(
         pipeline_file,
@@ -133,15 +127,12 @@ def visualize(pipeline_file, save_path, custom_nodes):
 @dag.command()
 @click.argument("pipeline_file")
 @click.option("--secrets", default=None, help="Path to secrets file.")
-@click.option("--custom-nodes", default=None, help="Path to custom nodes Python file.")
-@click.option(
-    "--custom-functions", default=None, help="Path to custom functions Python file."
-)
-@click.option(
-    "--custom-backends", default=None, help="Path to custom backends Python file."
-)
+@click.option("--custom-nodes", default=None, multiple=True, help="Path to custom nodes Python file.")
+@click.option("--custom-functions", default=None, multiple=True, help="Path to custom functions Python file.")
+@click.option("--custom-backends", default=None, multiple=True, help="Path to custom backends Python file.")
 @click.option("--visualization", default=None, help="Path to save visualization.")
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output.")
+@click.option("--input", "-i", nargs=2, type=(str, str), multiple=True, help="Input data for the pipeline.")
 def execute(
     pipeline_file,
     secrets,
@@ -150,16 +141,19 @@ def execute(
     custom_backends,
     visualization,
     verbose,
+    input,
 ):
     """Execute a pipeline."""
     from rich.console import Console
     from rich.panel import Panel
     from rich.tree import Tree
 
+    if input:
+        print("Given input data: ", dict(input))
     dag = initialize_dag(
         pipeline_file, secrets, custom_nodes, custom_functions, custom_backends
     )
-    results = dag.execute()
+    results = dag.execute(input_data=dict(input))
 
     if verbose:
         console = Console()
