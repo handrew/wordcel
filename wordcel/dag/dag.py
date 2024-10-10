@@ -202,6 +202,8 @@ class WordcelDAG:
             incoming_edges = self.graph.nodes[node_id].get("input")
             incoming_input = None
             if input_data and node_id in input_data:
+                # First check if the input data is given at runtime.
+                # If so, we don't need to look at the incoming edges.
                 assert (
                     incoming_edges is None
                 ), "Node cannot have both `input` and input data given at runtime."
@@ -212,9 +214,9 @@ class WordcelDAG:
                 incoming_input = results.get(incoming_edges)
 
             # Check the cache, if we have a backend.
-            if self.backend and self.backend.exists(node_id):
+            if self.backend and self.backend.exists(node_id, incoming_input):
                 log.info(f"Loading node `{node_id}` from cache.")
-                results[node_id] = self.backend.load(node_id)
+                results[node_id] = self.backend.load(node_id, incoming_input)
             else:
                 results[node_id] = node.execute(incoming_input)
                 if not _is_json_serializable(results[node_id]):
@@ -224,5 +226,5 @@ class WordcelDAG:
 
                 if self.backend:
                     log.info(f"Saving node `{node_id}` to cache.")
-                    self.backend.save(node_id, results[node_id])
+                    self.backend.save(node_id, incoming_input, results[node_id])
         return results
