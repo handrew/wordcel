@@ -1,6 +1,6 @@
 """DAG definition and node implementations."""
+
 import json
-import hashlib
 import logging
 import yaml
 import pandas as pd
@@ -145,22 +145,6 @@ class WordcelDAG:
             for backend_type, backend_class in custom_backends.items():
                 BackendRegistry.register(backend_type, backend_class)
 
-    def _generate_input_hash(self, input_data):
-        """Generate a hash for the input data."""
-        if input_data is None:
-            return "none"
-        if isinstance(input_data, pd.DataFrame):
-            # For DataFrames, hash the string representation.
-            data_str = input_data.to_json(orient="records")
-        elif isinstance(input_data, (list, dict)):
-            # For lists and dicts, use JSON representation.
-            data_str = json.dumps(input_data, sort_keys=True)
-        else:
-            # For other types, use string representation.
-            data_str = str(input_data)
-        
-        return hashlib.md5(data_str.encode()).hexdigest()
-
     def save_image(self, path: str) -> None:
         """Save an image of the DAG using graph.draw."""
         subset_key = "__wordcel_dag_layer__"
@@ -227,14 +211,10 @@ class WordcelDAG:
             else:
                 incoming_input = results.get(incoming_edges)
 
-            # Generate a hash for the input data.
-            input_hash = self._generate_input_hash(incoming_input)
-            cache_key = f"{node_id}_{input_hash}"
-
             # Check the cache, if we have a backend.
-            if self.backend and self.backend.exists(cache_key):
+            if self.backend and self.backend.exists(node_id):
                 log.info(f"Loading node `{node_id}` from cache.")
-                results[node_id] = self.backend.load(cache_key)
+                results[node_id] = self.backend.load(node_id)
             else:
                 results[node_id] = node.execute(incoming_input)
                 if not _is_json_serializable(results[node_id]):
@@ -244,5 +224,5 @@ class WordcelDAG:
 
                 if self.backend:
                     log.info(f"Saving node `{node_id}` to cache.")
-                    self.backend.save(cache_key, results[node_id])
+                    self.backend.save(node_id, results[node_id])
         return results
