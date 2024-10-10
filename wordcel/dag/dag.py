@@ -225,6 +225,4 @@ class WordcelDAG:
                 if self.backend:
                     log.info(f"Saving node `{node_id}` to cache.")
                     self.backend.save(node_id, results[node_id])
-
-            print("Node results: ", results[node_id])
         return results
