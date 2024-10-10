@@ -35,7 +35,7 @@ First import the relevant functions.
 ```python
 import pandas as pd
 from wordcel.featurize import apply_io_bound_function
-from wordcel.llm_providers import openai_call
+from wordcel.llms import openai_call
 ```
 
 Then, load your data.

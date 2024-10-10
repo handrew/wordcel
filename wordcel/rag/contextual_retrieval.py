@@ -24,7 +24,7 @@ from .utils import (
     create_tfidf_index,
     cosine_similarity_vectorized,
 )
-from ..llm_providers import anthropic_call
+from ..llms import anthropic_call
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

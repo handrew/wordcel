@@ -44,7 +44,7 @@ nodes:
     path: output.txt
 """
 
-    @patch("wordcel.llm_providers.openai_call")
+    @patch("wordcel.llms.openai_call")
     def test_dag_node(self, mock_openai_call):
         # Mock the LLM call to return a fixed response
         mock_openai_call.return_value = "Mocked LLM response"

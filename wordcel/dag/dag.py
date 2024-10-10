@@ -7,7 +7,7 @@ import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 from typing import Dict, Any, Type, Callable
-from ..llm_providers import openai_call
+from ..llms import openai_call
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
 from .default_functions import read_sql, llm_filter

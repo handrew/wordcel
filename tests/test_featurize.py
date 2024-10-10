@@ -1,6 +1,6 @@
 import pandas as pd
 from wordcel.featurize import apply_io_bound_function
-from wordcel.llm_providers import openai_call
+from wordcel.llms import openai_call
 
 
 def sentiment_classify(text: str) -> str:

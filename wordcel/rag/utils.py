@@ -5,7 +5,7 @@ import numpy as np
 from typing import List
 from langchain.text_splitter import CharacterTextSplitter
 from sklearn.feature_extraction.text import TfidfVectorizer
-from ..llm_providers import openai_call, openai_embed
+from ..llms import openai_call, openai_embed
 
 
 """RAG helper functions."""

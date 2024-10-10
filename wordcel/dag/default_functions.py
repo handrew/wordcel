@@ -2,7 +2,7 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from ..featurize import apply_io_bound_function
-from ..llm_providers import openai_call
+from ..llms import openai_call
 
 
 def read_sql(query: str, connection_string: str) -> pd.DataFrame:

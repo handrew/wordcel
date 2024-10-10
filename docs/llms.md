@@ -28,7 +28,7 @@ Wrapper function for Anthropic's completion API.
 
 **Example:**
 ```python
-from wordcel.llm_providers import anthropic_call
+from wordcel.llms import anthropic_call
 response = anthropic_call("What is the capital of France?")
 print(response)
 ```
@@ -65,7 +65,7 @@ Wrapper function for OpenAI's completion API.
 
 **Example:**
 ```python
-from wordcel.llm_providers import openai_call
+from wordcel.llms import openai_call
 response = openai_call("Explain quantum computing in simple terms.")
 print(response)
 ```
@@ -98,7 +98,7 @@ Wrapper function for Google Gemini's text generation API.
 
 **Example:**
 ```python
-from wordcel.llm_providers import gemini_call
+from wordcel.llms import gemini_call
 response = gemini_call("What are the main differences between Python and JavaScript?")
 print(response)
 ```
@@ -106,7 +106,7 @@ print(response)
 # openai_embed
 
 ```python
-from wordcel.llm_providers import openai_embed
+from wordcel.llms import openai_embed
 def openai_embed(text, model="text-embedding-3-small")
 ```
 

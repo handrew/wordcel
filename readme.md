@@ -14,7 +14,7 @@ You can simply `pip install wordcel`.
 
 ## Documentation
 
-- [LLM APIs](docs/llm_providers.md): Wrapper functions over the most common LLM APIs.
+- [LLM APIs](docs/llms.md): Wrapper functions over the most common LLM APIs.
 - [RAG](docs/rag.md): Helper functions for RAG, and a minimal implementation of Anthropic's "Contextual Retrieval" method. 
 - [featurize](docs/featurize.md): Helper functions for multithreaded inference over text columns in pandas DataFrames.
 - [DAG](docs/dag.md): WordcelDAG is a flexible and extensible framework for defining and executing Directed Acyclic Graphs (DAGs) of data processing tasks, particularly involving LLMs and dataframes. 
