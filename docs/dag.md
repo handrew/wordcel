@@ -46,7 +46,7 @@ results = dag.execute(input_data={"node_id": data})
 
 where `node_id` is the node that `data` is intended for. 
 
-### Running with the CLI
+### Quick Start with the CLI
 
 There is a CLI! `wordcel dag --help`:
 
@@ -64,6 +64,13 @@ Commands:
   new              Create a new pipeline.
   visualize        Visualize a pipeline.
 ```
+
+1. Start by creating a new YAML file with `wordcel dag new your_yaml_file.yaml`.
+
+2. Edit the resulting yaml file according to your needs. You can use `wordcel dag visualize your_yaml_file.yaml visualization.png --custom-nodes /path/to/your/nodes.py` to save an image of your DAG to inspect visually.
+
+3. Once you are satisified, you can run `wordcel dag execute your_yaml_file.yaml --verbose` to run the DAG and get a nice output.
+
 
 ## DAG Configuration (YAML)
 
@@ -98,9 +105,10 @@ nodes:
 
 Some examples can be found in the `tests` folder.
 
-General optional parameters for all nodes:
-- id: A unique identifier for the node (if not provided, it will be auto-generated).
-- inputs: List of input node ids (for nodes that accept input from other nodes).
+General parameters for all nodes:
+- id (required): A unique identifier for the node (if not provided, it will be auto-generated).
+- type (required): Defines what type the node is.
+- inputs (optional): List of input node ids (for nodes that accept input from other nodes). Can be none.
 
 ### `csv` CSVNode
 
@@ -110,6 +118,13 @@ Required:
 Optional:
 - None specific to this node.
 
+```
+- id: load_csv_data
+  type: csv
+  path: /path/to/your/data.csv
+```
+
+
 ### `json` JSONNode
 
 Required:
@@ -118,6 +133,11 @@ Required:
 Optional:
 - None specific to this node.
 
+```
+- id: load_json_data
+  type: json
+  path: /path/to/your/data.json
+```
 
 ### `json_dataframe` JSONDataFrameNode
 
@@ -127,6 +147,15 @@ Required:
 Optional:
 - `read_json_kwargs`: A dictionary of keyword arguments to pass to `pd.read_json()`.
 
+This is just a wrapper over `pd.read_json`, so whatever works for `read_json` will work here too.
+
+```
+- id: load_json_as_dataframe
+  type: json_dataframe
+  path: /path/to/your/data.json
+  read_json_kwargs:
+    orient: records
+```
 
 ### `sql` SQLNode
 
@@ -136,6 +165,12 @@ Required:
 Optional:
 - `None` specific to this node, but requires database connection details in secrets.
 
+```
+- id: execute_sql_query
+  type: sql
+  query: "SELECT * FROM users WHERE location = 'SF'"
+```
+
 ### `llm` LLMNode
 
 Required:
@@ -144,6 +179,15 @@ Required:
 Optional:
 - `input_column`: The column name to use as input when processing a DataFrame.
 - num_threads: Number of threads for parallel processing (default: 1).
+
+```
+- id: generate_summary
+  type: llm
+  template: "Summarize the following text: {input}"
+  input: previous_node_id
+  input_column: text_column
+  num_threads: 4
+```
 
 ### `llm_filter` LLMFilterNode
 
@@ -155,6 +199,16 @@ Required:
 Optional:
 - `num_threads`: Number of threads for parallel processing (default: 1).
 
+
+```
+- id: filter_content
+  type: llm_filter
+  input: previous_node_id
+  column: content
+  prompt: "Is this content suitable for all ages? Answer only Yes or No."
+  num_threads: 2
+```
+
 ### `file_writer` FileWriterNode
 
 Required:
@@ -162,6 +216,13 @@ Required:
 
 Optional:
 - `None` specific to this node.
+
+```
+- id: save_results
+  type: file_writer
+  input: previous_node_id
+  path: /path/to/output/results.txt
+```
 
 ### `dataframe_operation` DataFrameOperationNode
 
@@ -172,6 +233,18 @@ Optional:
 - `args`: List of positional arguments for the operation.
 - kwargs: Dictionary of keyword arguments for the operation.
 
+This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too.
+
+```
+- id: process_dataframe
+  type: dataframe_operation
+  input: previous_node_id
+  operation: groupby
+  args: ["category"]
+  kwargs:
+    as_index: false
+```
+
 ### `python_script` PythonScriptNode
 
 Required:
@@ -180,6 +253,13 @@ Required:
 Optional:
 - `args`: List of command-line arguments to pass to the script.
 
+```
+- id: run_custom_script
+  type: python_script
+  script_path: /path/to/your/script.py
+  args: ["arg1", "arg2"]
+```
+
 ### `dag` DAGNode
 
 Required:
@@ -187,6 +267,14 @@ Required:
 
 Optional:
 - `secrets_path`: The path to the secrets file for the sub-DAG.
+
+
+```
+- id: sub_dag
+  type: dag
+  path: /path/to/sub_dag.yaml
+  secrets_path: /path/to/sub_dag_secrets.yaml
+```
 
 
 ## Defining Custom Functions
