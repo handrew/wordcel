@@ -121,7 +121,7 @@ Optional:
 Input data:
 - Does not use any input data.
 
-```
+```yaml
 - id: load_csv_data
   type: csv
   path: /path/to/your/data.csv
@@ -138,7 +138,7 @@ Optional:
 Input data:
 - Does not use any input data.
 
-```
+```yaml
 - id: load_json_data
   type: json
   path: /path/to/your/data.json
@@ -156,7 +156,7 @@ Optional:
 Input data:
 - Does not use any input data.
 
-```
+```yaml
 - id: load_json_data
   type: json
   path: /path/to/your/data.json
@@ -175,7 +175,7 @@ Input data:
 
 This is just a wrapper over `pd.read_json`, so whatever works for `read_json` will work here too.
 
-```
+```yaml
 - id: load_json_as_dataframe
   type: json_dataframe
   path: /path/to/your/data.json
@@ -194,10 +194,30 @@ Optional:
 Input data:
 - Does not use any input data.
 
-```
+```yaml
 - id: execute_sql_query
   type: sql
   query: "SELECT * FROM users WHERE location = 'SF'"
+```
+
+
+### `string_template` StringTemplateNode
+
+Required:
+- template: String template using `${keyword}` format.
+
+Optional:
+- None specific to this node. 
+
+Input data:
+- Expects input_data to be None, a dictionary, or a list of dictionaries. If None, you're just passing a string.
+
+```yaml
+nodes:
+  - id: format_string
+    type: string_template
+    template: "Hello, ${name}! You are ${age} years old."
+    input: previous_node_id
 ```
 
 ### `llm` LLMNode
@@ -212,7 +232,7 @@ Optional:
 Input data:
 - Handles str, list of strings, or pandas DataFrame.
 
-```
+```yaml
 - id: generate_summary
   type: llm
   template: "Summarize the following text: {input}"
@@ -234,7 +254,7 @@ Optional:
 Input data:
 - Handles pandas DataFrame only.
 
-```
+```yaml
 - id: filter_content
   type: llm_filter
   input: previous_node_id
@@ -254,7 +274,7 @@ Optional:
 Input data:
 - String only.
 
-```
+```yaml
 - id: save_results
   type: file_writer
   input: previous_node_id
@@ -275,7 +295,7 @@ Input data:
 
 This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too.
 
-```
+```yaml
 - id: process_dataframe
   type: dataframe_operation
   input: previous_node_id
@@ -296,7 +316,7 @@ Optional:
 Input data:
 - List of strings only, which are converted to command line arguments.
 
-```
+```yaml
 - id: run_custom_script
   type: python_script
   script_path: /path/to/your/script.py
@@ -314,7 +334,7 @@ Optional:
 Input data:
 - None or a dictionary, simialr to how you might use `dag.execute`.
 
-```
+```yaml
 - id: sub_dag
   type: dag
   path: /path/to/sub_dag.yaml

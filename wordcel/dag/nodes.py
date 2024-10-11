@@ -3,6 +3,7 @@ import json
 import shlex
 import yaml
 import subprocess
+from string import Template
 import pandas as pd
 import logging
 import concurrent.futures
@@ -109,6 +110,26 @@ class SQLNode(Node):
         assert (
             "query" in self.config and "database_url" in self.secrets
         ), "SQLNode must have a 'query' configuration and a 'database_url' secret."
+        return True
+
+
+class StringTemplateNode(Node):
+    description = """Node to apply a string template to input data."""
+
+    def execute(self, input_data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[str, List[str]]:
+        template = Template(self.config["template"])
+        
+        if isinstance(input_data, list):
+            return [template.safe_substitute(item) for item in input_data]
+        elif isinstance(input_data, dict):
+            return template.safe_substitute(input_data)
+        elif isinstance(input_data, str):
+            return template.safe_substitute(input=input_data)
+        elif input_data is None:
+            return template.safe_substitute()
+
+    def validate_config(self) -> bool:
+        assert "template" in self.config, "StringTemplateNode must have a 'template' configuration."
         return True
 
 
@@ -336,6 +357,7 @@ NODE_TYPES: Dict[str, Type[Node]] = {
     "json": JSONNode,
     "json_dataframe": JSONDataFrameNode,
     "sql": SQLNode,
+    "string_template": StringTemplateNode,
     "llm": LLMNode,
     "llm_filter": LLMFilterNode,
     "file_writer": FileWriterNode,
