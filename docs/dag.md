@@ -118,10 +118,30 @@ Required:
 Optional:
 - None specific to this node.
 
+Input data:
+- Does not use any input data.
+
 ```
 - id: load_csv_data
   type: csv
   path: /path/to/your/data.csv
+```
+
+### `yaml` YAMLNode
+
+Required:
+- `path`: The file path to the JSON file.
+
+Optional:
+- None specific to this node.
+
+Input data:
+- Does not use any input data.
+
+```
+- id: load_json_data
+  type: json
+  path: /path/to/your/data.json
 ```
 
 
@@ -132,6 +152,9 @@ Required:
 
 Optional:
 - None specific to this node.
+
+Input data:
+- Does not use any input data.
 
 ```
 - id: load_json_data
@@ -146,6 +169,9 @@ Required:
 
 Optional:
 - `read_json_kwargs`: A dictionary of keyword arguments to pass to `pd.read_json()`.
+
+Input data:
+- Does not use any input data.
 
 This is just a wrapper over `pd.read_json`, so whatever works for `read_json` will work here too.
 
@@ -165,6 +191,9 @@ Required:
 Optional:
 - `None` specific to this node, but requires database connection details in secrets.
 
+Input data:
+- Does not use any input data.
+
 ```
 - id: execute_sql_query
   type: sql
@@ -179,6 +208,9 @@ Required:
 Optional:
 - `input_column`: The column name to use as input when processing a DataFrame.
 - num_threads: Number of threads for parallel processing (default: 1).
+
+Input data:
+- Handles str, list of strings, or pandas DataFrame.
 
 ```
 - id: generate_summary
@@ -199,6 +231,8 @@ Required:
 Optional:
 - `num_threads`: Number of threads for parallel processing (default: 1).
 
+Input data:
+- Handles pandas DataFrame only.
 
 ```
 - id: filter_content
@@ -217,6 +251,9 @@ Required:
 Optional:
 - `None` specific to this node.
 
+Input data:
+- String only.
+
 ```
 - id: save_results
   type: file_writer
@@ -232,6 +269,9 @@ Required:
 Optional:
 - `args`: List of positional arguments for the operation.
 - kwargs: Dictionary of keyword arguments for the operation.
+
+Input data:
+- DataFrame or list of DataFrames.
 
 This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too.
 
@@ -253,6 +293,9 @@ Required:
 Optional:
 - `args`: List of command-line arguments to pass to the script.
 
+Input data:
+- List of strings only, which are converted to command line arguments.
+
 ```
 - id: run_custom_script
   type: python_script
@@ -268,6 +311,8 @@ Required:
 Optional:
 - `secrets_path`: The path to the secrets file for the sub-DAG.
 
+Input data:
+- None or a dictionary, simialr to how you might use `dag.execute`.
 
 ```
 - id: sub_dag

@@ -51,6 +51,7 @@ class CSVNode(Node):
     description = """Node to read a CSV file."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
+        assert input_data is None, "CSVNode does not take input data."
         return pd.read_csv(self.config["path"])
 
     def validate_config(self) -> bool:
@@ -62,6 +63,7 @@ class YAMLNode(Node):
     description = """Node to read a YAML file."""
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
+        assert input_data is None, "YAMLNode does not take input data."
         with open(self.config["path"], "r") as file:
             return yaml.safe_load(file)
 
@@ -86,6 +88,7 @@ class JSONDataFrameNode(Node):
     description = """Node to read a JSON file into a pandas DataFrame."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
+        assert input_data is None, "JSONDataFrameNode does not take input data."
         return pd.read_json(self.config["path"], **self.config.get("read_json_kwargs", {}))
 
     def validate_config(self) -> bool:
@@ -97,6 +100,7 @@ class SQLNode(Node):
     description = """Node to execute a SQL query."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
+        assert input_data is None, "SQLNode does not take input data."
         connection_string = self.secrets["database_url"]
         read_sql_fn = self.functions.get("read_sql", read_sql)
         return read_sql_fn(self.config["query"], connection_string)
@@ -173,6 +177,7 @@ class LLMFilterNode(Node):
     def execute(self, input_data: pd.DataFrame) -> Union[pd.DataFrame, pd.Series]:
         is_dataframe = isinstance(input_data, pd.DataFrame)
         assert is_dataframe, "LLMFilterNode must have a DataFrame as input."
+
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
         if num_threads > 1:
@@ -268,22 +273,16 @@ class PythonScriptNode(Node):
         script_path = shlex.quote(self.config["script_path"])
         args = self.config.get("args", [])
 
-        # Prepare the command
+        # Prepare the command.
         command = ["python", script_path]
 
-        # Handle input_data
+        # Handle input_data.
         if input_data is not None:
-            if isinstance(input_data, pd.DataFrame):
-                # Convert DataFrame to JSON string
-                input_json = input_data.to_json(orient="records")
-                command.extend(["--input", shlex.quote(input_json)])
-            elif isinstance(input_data, (list, dict)):
-                # Convert list or dict to JSON string
-                input_json = json.dumps(input_data)
-                command.extend(["--input", shlex.quote(input_json)])
+            if isinstance(input_data, list):
+                # Extend the command with the list elements.
+                command.extend([shlex.quote(str(item)) for item in input_data])
             else:
-                # For other types, convert to string
-                command.extend(["--input", shlex.quote(str(input_data))])
+                raise ValueError("PythonScriptNode only accepts input_data of type list.")
 
         # Add args from YAML config
         if args:
@@ -309,7 +308,7 @@ class PythonScriptNode(Node):
 class DAGNode(Node):
     description = """Node to execute a sub-DAG defined in a YAML file."""
 
-    def execute(self, input_data: Any) -> Any:
+    def execute(self, input_data: Dict[str, Any]) -> Any:
         from .dag import WordcelDAG
         # Ensure that the custom_functions don't override the default
         # functions. Subtract out the ones that do.
@@ -324,7 +323,7 @@ class DAGNode(Node):
             secrets_file=self.config.get("secrets_path"),
             custom_functions=self.functions,
         )
-        return sub_dag.execute()
+        return sub_dag.execute(input_data=input_data)
 
     def validate_config(self) -> bool:
         assert "path" in self.config, "DAGNode must have a 'path' configuration."
