@@ -287,7 +287,7 @@ Required:
 
 Optional:
 - `args`: List of positional arguments for the operation.
-- kwargs: Dictionary of keyword arguments for the operation.
+- `kwargs`: Dictionary of keyword arguments for the operation.
 
 Input data:
 - DataFrame or list of DataFrames.
