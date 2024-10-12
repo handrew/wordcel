@@ -173,7 +173,9 @@ class LLMNode(Node):
                 )
 
             return results
-        elif isinstance(input_data, list):
+        elif isinstance(input_data, list) or isinstance(input_data, pd.Series):
+            if isinstance(input_data, pd.Series):
+                input_data = input_data.tolist()
             with concurrent.futures.ThreadPoolExecutor(
                 max_workers=num_threads
             ) as executor:
