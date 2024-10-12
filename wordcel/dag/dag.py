@@ -36,7 +36,7 @@ def _is_json_serializable(data: Any) -> bool:
     """Check if the data is JSON serializable, or is a DataFrame which
     is JSON serializable."""
     try:
-        if isinstance(data, pd.DataFrame):
+        if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
             data.to_json(orient="records")
         elif hasattr(data, "to_json"):
             data.to_json()

@@ -56,7 +56,7 @@ class LocalBackend(Backend):
         """Generate a hash for the input data."""
         if input_data is None:
             return "none"
-        if isinstance(input_data, pd.DataFrame):
+        if isinstance(input_data, pd.DataFrame) or isinstance(input_data, pd.Series):
             data_str = input_data.to_json(orient="records")
         elif isinstance(input_data, (list, dict)):
             data_str = json.dumps(input_data, sort_keys=True)
@@ -71,7 +71,7 @@ class LocalBackend(Backend):
 
     def save(self, node_id: str, input_data: Any, data: Any) -> None:
         """Save data or DataFrame to a JSON file."""
-        if isinstance(data, pd.DataFrame):
+        if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
             data = data.to_json(orient="records")
             # Add a flag to indicate that the data is a DataFrame.
             data = {"__dataframe__": True, "data": data}
