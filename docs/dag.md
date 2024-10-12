@@ -213,11 +213,10 @@ Input data:
 - Expects input_data to be None, a dictionary, or a list of dictionaries. If None, you're just passing a string.
 
 ```yaml
-nodes:
-  - id: format_string
-    type: string_template
-    template: "Hello, ${name}! You are ${age} years old."
-    input: previous_node_id
+- id: format_string
+  type: string_template
+  template: "Hello, ${name}! You are ${age} years old."
+  input: previous_node_id
 ```
 
 ### `llm` LLMNode

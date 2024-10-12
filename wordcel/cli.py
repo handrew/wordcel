@@ -45,6 +45,38 @@ nodes:
 #     type: file_writer
 #     path: "example_output.txt"
 #     input: process_filtered
+
+# Other node types you might like:
+
+# - id: load_json_data
+#   type: json
+#   path: /path/to/your/data.json
+
+# - id: load_json_data
+#   type: json
+#   path: /path/to/your/data.json
+
+# - id: load_json_as_dataframe
+#   type: json_dataframe
+#   path: /path/to/your/data.json
+#   read_json_kwargs:
+#     orient: records
+
+# - id: format_string
+#   type: string_template
+#   template: "Hello, ${name}! You are ${age} years old."
+#   input: previous_node_id
+
+# - id: run_custom_script
+#   type: python_script
+#   script_path: /path/to/your/script.py
+#   args: ["arg1", "arg2"]
+
+# - id: sub_dag
+#   type: dag
+#   path: /path/to/sub_dag.yaml
+#   secrets_path: /path/to/sub_dag_secrets.yaml
+
 """
 
 
