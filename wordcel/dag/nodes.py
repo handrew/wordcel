@@ -1,4 +1,5 @@
 """Node definitions."""
+import os
 import json
 import shlex
 import yaml
@@ -314,15 +315,37 @@ class PythonScriptNode(Node):
                 else:
                     command.append(shlex.quote(str(arg)))
 
-        # Execute the script
+        # Execute the script.
         try:
-            result = subprocess.run(command, shell=False)
-            return result.stdout
+            result = subprocess.run(command, shell=False, stdout=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"Script execution failed: {e.stderr}")
+        
+        # Handle node output.
+        output_file_key = "return_output_file"
+        return_stdout_key = "return_stdout"
+        if output_file_key in self.config:
+            assert self.config[output_file_key].endswith(
+                (".csv", ".json")
+            ), f"{output_file_key} must be a csv or json file."
+
+            # Read the file and return the result.
+            if self.config[output_file_key].endswith(".csv"):
+                return pd.read_csv(self.config[output_file_key])
+            elif self.config[output_file_key].endswith(".json"):
+                with open(self.config[output_file_key], "r") as file:
+                    return json.load(file)
+        elif return_stdout_key in self.config:
+            stdout = result.stdout
+            return json.loads(stdout)
 
     def validate_config(self) -> bool:
-        assert "script_path" in self.config, "PythonScript node must have a 'script_path' configuration."
+        assert "script_path" in self.config, "PythonScript node must have a `script_path` configuration."
+        assert os.path.exists(self.config["script_path"]), "PythonScript node `script_path` does not exist."
+        # Assert that only one of output_file or return_stdout is present, but not both.
+        has_output_file = "return_output_file" in self.config
+        has_return_stdout = "return_stdout" in self.config
+        assert has_output_file != has_return_stdout, "PythonScript node must have either `output_file` or `return_stdout` configuration."
         return True
 
 

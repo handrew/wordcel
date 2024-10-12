@@ -6,13 +6,13 @@
 
 ## Overview
 
-WordcelDAG is a flexible and extensible framework for defining and executing Directed Acyclic Graphs (DAGs) of data processing tasks, particularly involving LLMs and dataframes. 
+WordcelDAG is a flexible framework for defining and executing Directed Acyclic Graphs (DAGs) of data processing tasks, particularly involving LLMs and dataframes. 
 
 There are plenty of great Pythonic DAG execution frameworks out there. Metaflow is great for data science pipelines; Prefect, Luigi, and Dagster for data pipelines; I really liked ControlFlow for agentic workflows. Rivet by Ironclad was probably the closest thing to what I wanted, but it didn't have great support for Python, and you had to use a visual canvas (as with Flowise, LangFlow, etc).
 
-While great projects in their own right, none of the above quite provided what I was looking for. The underlying motivation for WordcelDAG was to create a DAG framework with a few things in mind: 
+While great projects in their own right, none of the above quite provided what I was looking for. Accordingly, the underlying motivation for WordcelDAG was to create a DAG framework with a few things in mind: 
 1. YAML as a first-class citizen. I didn't want to be writing and maintaining Python, or drawing on a visual canvas.
-2. Making it easy to call chain LLMs.
+2. Making it easy to call and chain LLMs.
 3. Support for working with dataframes.
 
 ## Key Features
@@ -309,6 +309,7 @@ This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame 
 
 Required:
 - `script_path`: The path to the Python script to execute.
+- `return_output_file` (str) or `return_stdout` (bool): Either the script must save its output to `return_output_file` or print a JSON-serializable string to stdout.
 
 Optional:
 - `args`: List of command-line arguments to pass to the script.
