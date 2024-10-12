@@ -292,7 +292,7 @@ Optional:
 Input data:
 - DataFrame or list of DataFrames.
 
-This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too.
+This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too. Also supports `pd.concat` and `pd.merge` if given a list of DataFrames in the input_data.
 
 ```yaml
 - id: process_dataframe
