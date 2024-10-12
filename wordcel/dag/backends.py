@@ -1,4 +1,5 @@
 """Backends to store data."""
+
 import os
 import hashlib
 import json
@@ -51,7 +52,7 @@ class LocalBackend(Backend):
 
     def _get_path(self, key: str) -> str:
         return os.path.join(self.cache_dir, f"{key}.json")
-    
+
     def _generate_input_hash(self, input_data: Any) -> str:
         """Generate a hash for the input data."""
         if input_data is None:
@@ -59,11 +60,30 @@ class LocalBackend(Backend):
         if isinstance(input_data, pd.DataFrame) or isinstance(input_data, pd.Series):
             data_str = input_data.to_json(orient="records")
         elif isinstance(input_data, (list, dict)):
+            # Convert all the DataFrames or Series into JSON strings.
+            if isinstance(input_data, dict):
+                input_data = {
+                    k: (
+                        v.to_json(orient="records")
+                        if isinstance(v, pd.DataFrame) or isinstance(v, pd.Series)
+                        else v
+                    )
+                    for k, v in input_data.items()
+                }
+            else:
+                input_data = [
+                    (
+                        v.to_json(orient="records")
+                        if isinstance(v, pd.DataFrame) or isinstance(v, pd.Series)
+                        else v
+                    )
+                    for v in input_data
+                ]
             data_str = json.dumps(input_data, sort_keys=True)
         else:
             data_str = str(input_data)
         return hashlib.md5(data_str.encode()).hexdigest()
-    
+
     def generate_cache_key(self, node_id: str, input_data: Any) -> str:
         """Generate a cache key for the node and input data."""
         input_hash = self._generate_input_hash(input_data)
@@ -93,7 +113,7 @@ class LocalBackend(Backend):
     def exists(self, node_id: str, input_data: Any) -> bool:
         cache_key = self.generate_cache_key(node_id, input_data)
         return os.path.exists(self._get_path(cache_key))
-    
+
 
 BACKEND_TYPES: Dict[str, Backend] = {
     "local": LocalBackend,
