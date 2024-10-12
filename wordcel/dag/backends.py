@@ -93,8 +93,10 @@ class LocalBackend(Backend):
         """Save data or DataFrame to a JSON file."""
         if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
             data = data.to_json(orient="records")
-            # Add a flag to indicate that the data is a DataFrame.
-            data = {"__dataframe__": True, "data": data}
+            if isinstance(data, pd.DataFrame):
+                data = {"__type__": "dataframe", "data": data}
+            elif isinstance(data, pd.Series):
+                data = {"__type__": "series", "data": data}
 
         cache_key = self.generate_cache_key(node_id, input_data)
         with open(self._get_path(cache_key), "w") as f:
@@ -106,8 +108,12 @@ class LocalBackend(Backend):
         with open(self._get_path(cache_key), "r") as f:
             data = json.load(f)
             # Check for the flag indicating a DataFrame.
-            if data is not None and "__dataframe__" in data:
-                data = pd.read_json(StringIO(data["data"]))
+            if data is not None:
+                if data["__type__"] == "dataframe":
+                    data = pd.read_json(StringIO(data["data"]))
+                elif data["__type__"] == "series":
+                    data = pd.read_json(StringIO(data["data"]), typ="series", orient="records")
+
             return data
 
     def exists(self, node_id: str, input_data: Any) -> bool:
