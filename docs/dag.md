@@ -226,6 +226,7 @@ Required:
 
 Optional:
 - `input_column`: The column name to use as input when processing a DataFrame.
+- `model`: Which model to use. Supported models can be found in `wordcel.llms`, but is generally limited to OpenAI, Anthropic, Gemini.
 - num_threads: Number of threads for parallel processing (default: 1).
 
 Input data:
@@ -248,6 +249,7 @@ Required:
 - input: The input node (must be a single input).
 
 Optional:
+- `model`: Which model to use. Supported models can be found in `wordcel.llms`, but is generally limited to OpenAI, Anthropic, Gemini.
 - `num_threads`: Number of threads for parallel processing (default: 1).
 
 Input data:

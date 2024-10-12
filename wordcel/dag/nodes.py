@@ -146,6 +146,8 @@ class LLMNode(Node):
         llm_call = self.functions["llm_call"]
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
+        model = self.config.get("model", "gpt-4o-mini")
+
         if num_threads > 1:
             log.info(f"Using {num_threads} threads for LLM Node.")
 
@@ -163,7 +165,8 @@ class LLMNode(Node):
                 results = list(
                     executor.map(
                         lambda text: llm_call(
-                            self.config["template"].format(input=text)
+                            self.config["template"].format(input=text),
+                            model=model
                         ),
                         texts,
                     )
@@ -177,14 +180,18 @@ class LLMNode(Node):
                 results = list(
                     executor.map(
                         lambda text: llm_call(
-                            self.config["template"].format(input=text)
+                            self.config["template"].format(input=text),
+                            model=model
                         ),
                         input_data,
                     )
                 )
             return results
         else:
-            return llm_call(self.config["template"].format(input=input_data))
+            return llm_call(
+                self.config["template"].format(input=input_data),
+                model=model
+            )
 
     def validate_config(self) -> bool:
         assert (
@@ -199,7 +206,7 @@ class LLMFilterNode(Node):
     def execute(self, input_data: pd.DataFrame) -> Union[pd.DataFrame, pd.Series]:
         is_dataframe = isinstance(input_data, pd.DataFrame)
         assert is_dataframe, "LLMFilterNode must have a DataFrame as input."
-
+        model = self.config.get("model", "gpt-4o-mini")
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
         if num_threads > 1:
@@ -210,6 +217,7 @@ class LLMFilterNode(Node):
             input_data,
             self.config["column"],
             self.config["prompt"],
+            model=model,
             num_threads=num_threads,
         )
 

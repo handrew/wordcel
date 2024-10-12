@@ -2,7 +2,7 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from ..featurize import apply_io_bound_function
-from ..llms import openai_call
+from ..llms import llm_call
 
 
 def read_sql(query: str, connection_string: str) -> pd.DataFrame:
@@ -14,17 +14,21 @@ def read_sql(query: str, connection_string: str) -> pd.DataFrame:
 
 
 def llm_filter(
-    df: pd.DataFrame, column: str, prompt: str, num_threads: int = 1
+    df: pd.DataFrame, column: str, prompt: str, model="gpt-4o-mini", num_threads: int = 1
 ) -> pd.DataFrame:
     """Helper function to filter a DataFrame using an LLM yes/no question."""
     if num_threads == 1:
         results = df[column].apply(
-            lambda value: openai_call(prompt + "\n\n----\n\n" + value)
+            lambda value: llm_call(
+                prompt + "\n\n----\n\n" + value, model=model
+            )
         )
     else:
         results = apply_io_bound_function(
             df,
-            lambda value: openai_call(prompt + "\n\n----\n\n" + value),
+            lambda value: llm_call(
+                prompt + "\n\n----\n\n" + value, model=model
+            ),
             text_column=column,
             num_threads=num_threads,
         )

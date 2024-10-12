@@ -7,10 +7,9 @@ import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 from typing import Dict, Any, Type, Callable
-from ..llms import openai_call
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
-from .default_functions import read_sql, llm_filter
+from .default_functions import read_sql, llm_filter, llm_call
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -56,7 +55,7 @@ class WordcelDAG:
 
     default_functions = {
         "read_sql": read_sql,
-        "llm_call": openai_call,
+        "llm_call": llm_call,
         "llm_filter": llm_filter,
     }
 

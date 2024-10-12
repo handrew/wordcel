@@ -4,6 +4,30 @@ import openai
 import google.generativeai as genai
 
 
+SUPPORTED_MODELS = {
+    "gpt-4o-mini": "gpt-4o-mini",
+    "gpt-4o": "gpt-4o",
+    "haiku": "claude-3-haiku-20240307",
+    "sonnet": "claude-3-5-sonnet-20240620",
+    "gemini-1.5-flash": "gemini-1.5-flash-002",
+    "gemini-1.5-pro": "gemini-1.5-pro-002",
+}
+
+
+def llm_call(prompt, model="haiku", **kwargs):
+    """Router for openai_call, gemini_call, and anthropic_call."""
+    error_msg = f"Model {model} not supported. Supported models: {SUPPORTED_MODELS.keys()}"
+    assert model in SUPPORTED_MODELS, error_msg
+    if model in ["gpt-4o-mini", "gpt-4o"]:
+        return openai_call(prompt, model=model, **kwargs)
+    elif model == "gemini-1.5-flash" or model == "gemini-1.5-pro":
+        return gemini_call(prompt, model=model, **kwargs)
+    elif model in ["haiku", "sonnet"]:
+        return anthropic_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
+    else:
+        raise ValueError(error_msg)
+    
+
 def anthropic_call(
     prompt,
     system_prompt="You are a helpful assistant.",
@@ -68,7 +92,7 @@ def openai_call(
 def gemini_call(
     prompt,
     system_prompt=None,
-    model="gemini-1.5-flash",
+    model=SUPPORTED_MODELS["gemini-1.5-flash"],
     temperature=0,
     max_tokens=8192,
 ):
