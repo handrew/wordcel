@@ -115,19 +115,29 @@ class SQLNode(Node):
 
 
 class StringTemplateNode(Node):
-    description = """Node to apply a string template to input data."""
+    description = """Node to apply a string template to input data. The
+    `header`, if given, is placed at the top. The `template` is filled in
+    at least once, and potentially many times depending on the input."""
 
-    def execute(self, input_data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[str, List[str]]:
+    def execute(self, input_data: Union[Dict[str, Any], List[Dict[str, Any]], pd.DataFrame]) -> Union[str, List[str]]:
         template = Template(self.config["template"])
-        
+
+        return_string = self.config.get("header", "") + "\n\n"
         if isinstance(input_data, list):
-            return [template.safe_substitute(item) for item in input_data]
+            for item in input_data:
+                return_string = return_string + template.safe_substitute(item) + "\n\n"
+        elif isinstance(input_data, pd.DataFrame):
+            records = input_data.to_dict(orient="records")
+            for record in records:
+                return_string = return_string + template.safe_substitute(record) + "\n\n"
         elif isinstance(input_data, dict):
-            return template.safe_substitute(input_data)
+            return_string = return_string + template.safe_substitute(input_data)
         elif isinstance(input_data, str):
-            return template.safe_substitute(input=input_data)
+            return_string = return_string + template.safe_substitute(input=input_data)
         elif input_data is None:
-            return template.safe_substitute()
+            return_string = return_string + template.safe_substitute()
+    
+        return return_string
 
     def validate_config(self) -> bool:
         assert "template" in self.config, "StringTemplateNode must have a 'template' configuration."
