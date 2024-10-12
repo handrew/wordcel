@@ -184,7 +184,7 @@ class WordcelDAG:
                 raise ValueError(f"Error creating node {node_id}: {str(e)}")
         return nodes
 
-    def execute(self, input_data: Dict[str, Any] = None) -> Dict[str, Any]:
+    def execute(self, input_data: Dict[str, Any] = None, verbose=False) -> Dict[str, Any]:
         """Execute the DAG.
 
         @param input_data: A dictionary of input data for the nodes. The key
@@ -226,4 +226,8 @@ class WordcelDAG:
                 if self.backend:
                     log.info(f"Saving node `{node_id}` to cache.")
                     self.backend.save(node_id, incoming_input, results[node_id])
+
+            if verbose:
+                print(f"Result for node {node_id}:")
+                print(results[node_id])
         return results

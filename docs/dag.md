@@ -294,7 +294,7 @@ Optional:
 Input data:
 - DataFrame or list of DataFrames.
 
-This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too. Also supports `pd.concat` and `pd.merge` if given a list of DataFrames in the input_data.
+This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too. Also supports `pd.concat` and `pd.merge` if given a list of DataFrames in the input_data. There is also a `set_column` operation as a wrapper around `df["column_name"] = series`, which requires a `column_name`, shown below.
 
 ```yaml
 - id: process_dataframe
@@ -304,6 +304,21 @@ This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame 
   args: ["category"]
   kwargs:
     as_index: false
+```
+
+Example with `set_column`:
+
+```yaml
+- id: process_dataframe
+  type: dataframe_operation
+  input: [dataframe_from_previous_node, series_or_list_from_previous_node]
+  operation: set_column
+  column_name: "new_col_name" 
+```
+
+which is a wrapper on 
+```python
+dataframe_from_previous_node[new_col_name] = series_or_list_from_previous_node
 ```
 
 ### `python_script` PythonScriptNode

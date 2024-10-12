@@ -254,45 +254,66 @@ class DataFrameOperationNode(Node):
     description = """Node to apply a DataFrame operation to the input data."""
 
     def execute(
-        self, input_data: Union[pd.DataFrame, List[pd.DataFrame]]
+        self, input_data: Union[pd.DataFrame, List]
     ) -> pd.DataFrame:
         if not isinstance(input_data, list):
             input_data = [input_data]
-
-        if not all(isinstance(df, pd.DataFrame) for df in input_data):
-            raise ValueError("All inputs must be DataFrames")
-
         return self._apply_operation(input_data)
+        
+    def __handle_dataframe_method(self, df: pd.DataFrame, operation: str, *args, **kwargs) -> pd.DataFrame:
+        """Handle DataFrame methods."""
+        if hasattr(df, operation):
+            method = getattr(df, operation)
+            if callable(method):
+                try:
+                    return method(*args, **kwargs)
+                except TypeError:
+                    raise TypeError(f"Error calling method {operation} with args {args} and kwargs {kwargs}.")
+            else:
+                return method
+        else:
+            raise ValueError(f"Unknown DataFrame operation: {operation}")
 
-    def _apply_operation(self, dataframes: List[pd.DataFrame]) -> pd.DataFrame:
+    def _apply_operation(self, input_array: List) -> pd.DataFrame:
         operation = self.config["operation"]
         args = self.config.get("args", [])
         kwargs = self.config.get("kwargs", {})
 
-        if operation in ["concat", "merge"]:
-            # For concat and merge, use pd.concat or pd.merge directly
-            if operation == "concat":
-                return pd.concat(dataframes, *args, **kwargs)
-            elif operation == "merge":
-                if len(dataframes) != 2:
-                    raise ValueError("Merge operation requires exactly two DataFrames")
-                return pd.merge(dataframes[0], dataframes[1], *args, **kwargs)
+        every_element_is_dataframe = all(isinstance(df, pd.DataFrame) for df in input_array)
+
+        if operation == "concat":
+            assert every_element_is_dataframe, "All inputs must be DataFrames."
+            return pd.concat(input_array, **kwargs)
+        elif operation == "merge":
+            assert len(input_array) == 2, "Merge operation requires exactly two DataFrames."
+            assert every_element_is_dataframe, "All inputs must be DataFrames."
+            return pd.merge(input_array[0], input_array[1], **kwargs)
+        elif operation == "set_column":
+            # Assert that one input is a DataFrame and the other is a string, list, or Series.
+            assert len(input_array) == 2, "`set_column` operation requires exactly two inputs."
+            assert isinstance(input_array[0], pd.DataFrame), "First input must be a DataFrame."
+            assert isinstance(input_array[1], (str, list, pd.Series)), "Second input must be a string, list, or Series."
+            df = input_array[0]
+            df.loc[:, self.config["column_name"]] = input_array[1]
+            return df
         else:
-            # For other operations, apply to the first DataFrame
-            df = dataframes[0]
-            if hasattr(df, operation):
-                method = getattr(df, operation)
-                if callable(method):
-                    return method(*args, **kwargs)
-                else:
-                    return method
-            else:
-                raise ValueError(f"Unknown DataFrame operation: {operation}")
+            # Apply the operation to each DataFrame.
+            completed = [
+                self.__handle_dataframe_method(df, operation, *args, **kwargs)
+                for df in input_array
+            ]
+            if len(completed) == 1:
+                return completed[0]
+            return completed
 
     def validate_config(self) -> bool:
         assert (
             "operation" in self.config
-        ), "DataFrameOperationNode must have an 'operation' configuration."
+        ), "DataFrameOperationNode must have an `operation` configuration."
+        if self.config["operation"] == "set_column":
+            assert (
+                "column_name" in self.config
+            ), "DataFrameOperationNode with `set_column` operation must have a `column_name` configuration."
         return True
 
 

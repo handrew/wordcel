@@ -207,17 +207,16 @@ def execute(
     dag = initialize_dag(
         pipeline_file, secrets, custom_nodes, custom_functions, custom_backends
     )
-    results = dag.execute(input_data=dict(input))
+    results = dag.execute(input_data=dict(input), verbose=verbose)
 
-    if verbose:
-        console = Console()
-        tree = Tree("⚡️ [bold blue]Execution Results")
+    console = Console()
+    tree = Tree("⚡️ [bold blue]Execution Results")
 
-        for node_id, result in results.items():
-            node_tree = tree.add(f"[bold green]{node_id}")
-            node_tree.add(f"{result}")
+    for node_id, result in results.items():
+        node_tree = tree.add(f"[bold green]{node_id}")
+        node_tree.add(f"{result}")
 
-        console.print(Panel(tree, expand=False, border_style="bold"))
+    console.print(Panel(tree, expand=False, border_style="bold"))
 
     if visualization:
         dag.save_image(visualization)
