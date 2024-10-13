@@ -98,6 +98,48 @@ class JSONDataFrameNode(Node):
         return True
 
 
+import os
+import glob
+from typing import Union, List, Dict
+import pandas as pd
+
+class FileDirectoryNode(Node):
+    description = """Node to read text and markdown files from a directory or list of directories, supporting regex patterns."""
+
+    def execute(self, input_data: Any) -> pd.DataFrame:
+        assert input_data is None or isinstance(input_data, dict), "FileDirectoryNode does not take input data."
+        paths = self.config.get("path")
+        if isinstance(input_data, dict) and "path" in input_data:
+            paths = input_data["path"]
+            assert "path" not in self.config, "FileDirectoryNode `path` cannot be in input data if it is in the configuration."
+            if isinstance(paths, list):
+                assert all(isinstance(path, str) for path in paths), "FileDirectoryNode `path` in input data must be a list of strings."
+        if isinstance(paths, str):
+            paths = [paths]
+        
+        paths = [os.path.expanduser(path) for path in paths]
+
+        file_contents = []
+        for path in paths:
+            for file_path in glob.glob(path, recursive=True):
+                if file_path.lower().endswith(('.txt', '.md', '.html')):
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        content = file.read()
+                        file_contents.append({
+                            'file_path': file_path,
+                            'content': content,
+                            'file_type': os.path.splitext(file_path)[1][1:]  # Get file extension without the dot
+                        })
+        
+        return pd.DataFrame(file_contents)
+
+    def validate_config(self) -> bool:
+        if "path" in self.config:
+            paths = self.config["path"]
+            assert isinstance(paths, str) or isinstance(paths, list), "FileDirectoryNode 'path' must be a string or a list of strings."
+        return True
+
+
 class SQLNode(Node):
     description = """Node to execute a SQL query."""
 
@@ -420,6 +462,7 @@ NODE_TYPES: Dict[str, Type[Node]] = {
     "yaml": YAMLNode,
     "json": JSONNode,
     "json_dataframe": JSONDataFrameNode,
+    "file_directory": FileDirectoryNode,
     "sql": SQLNode,
     "string_template": StringTemplateNode,
     "llm": LLMNode,
