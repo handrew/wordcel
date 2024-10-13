@@ -4,9 +4,7 @@ import os
 import logging
 import click
 from rich import print
-from wordcel.dag.utils import create_custom_functions_from_files
-from wordcel.dag.utils import create_custom_nodes_from_files
-from wordcel.dag.utils import create_custom_backends_from_files
+from wordcel.dag.utils import initialize_dag
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -78,36 +76,6 @@ nodes:
 #   secrets_path: /path/to/sub_dag_secrets.yaml
 
 """
-
-
-def initialize_dag(
-    pipeline_file,
-    secrets_file=None,
-    custom_nodes=None,
-    custom_functions=None,
-    custom_backends=None,
-):
-    """Initialize the DAG."""
-    from wordcel.dag import WordcelDAG
-
-    if custom_nodes:
-        custom_nodes = create_custom_nodes_from_files(custom_nodes)
-
-    if custom_functions:
-        custom_functions = create_custom_functions_from_files(custom_functions)
-
-    if custom_backends:
-        custom_backends = create_custom_backends_from_files(custom_backends)
-
-    dag = WordcelDAG(
-        pipeline_file,
-        secrets_file=secrets_file,
-        custom_nodes=custom_nodes,
-        custom_functions=custom_functions,
-        custom_backends=custom_backends,
-    )
-
-    return dag
 
 
 @click.group()
@@ -186,7 +154,15 @@ def visualize(pipeline_file, save_path, custom_nodes, secrets):
     nargs=2,
     type=(str, str),
     multiple=True,
-    help="Input data for the pipeline. Given in the format `-i key value`. The key is the node ID that the input data is for.",
+    help="Input data for the pipeline. Given in the format `-i node_id value`.",
+)
+@click.option(
+    "--config-param",
+    "-c",
+    nargs=2,
+    type=(str, str),
+    multiple=True,
+    help="Substitute values into the config file at runtime. Given in the format `-c param value`.",
 )
 def execute(
     pipeline_file,
@@ -197,17 +173,26 @@ def execute(
     visualization,
     verbose,
     input,
+    config_param,
 ):
     """Execute a pipeline."""
     from rich.console import Console
     from rich.panel import Panel
     from rich.tree import Tree
 
+    
+    dag = initialize_dag(
+        pipeline_file,
+        config_params=dict(config_param),
+        secrets_file=secrets,
+        custom_nodes=custom_nodes,
+        custom_functions=custom_functions,
+        custom_backends=custom_backends
+    )
+
     if input:
         print("Given input data: ", dict(input))
-    dag = initialize_dag(
-        pipeline_file, secrets, custom_nodes, custom_functions, custom_backends
-    )
+
     results = dag.execute(input_data=dict(input), verbose=verbose)
 
     console = Console()

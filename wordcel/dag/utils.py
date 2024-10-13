@@ -1,9 +1,11 @@
 """Utility functions for the DAG module."""
 import importlib.util
+from string import Template
 from typing import Dict, Type, Union, List
 from rich import print
 from .nodes import Node
 from .backends import Backend
+from .dag import WordcelDAG
 
 
 def load_module(file_path, module_name):
@@ -73,3 +75,39 @@ def create_custom_backends_from_files(custom_backends_files: Union[str, List]) -
 
     print("Created custom backends: ", custom_backends)
     return custom_backends
+
+
+def initialize_dag(
+    pipeline_file,
+    config_params=None,
+    secrets_file=None,
+    custom_nodes=None,
+    custom_functions=None,
+    custom_backends=None,
+):
+    """Initialize the DAG."""
+    
+
+    if custom_nodes:
+        custom_nodes = create_custom_nodes_from_files(custom_nodes)
+
+    if custom_functions:
+        custom_functions = create_custom_functions_from_files(custom_functions)
+
+    if custom_backends:
+        custom_backends = create_custom_backends_from_files(custom_backends)
+
+    if config_params:
+        with open(pipeline_file, "r") as f:
+            pipeline_content = f.read()
+        pipeline_file = Template(pipeline_content).safe_substitute(config_params)
+
+    dag = WordcelDAG(
+        pipeline_file,
+        secrets_file=secrets_file,
+        custom_nodes=custom_nodes,
+        custom_functions=custom_functions,
+        custom_backends=custom_backends,
+    )
+
+    return dag

@@ -103,8 +103,23 @@ class WordcelDAG:
     @staticmethod
     def load_yaml(yaml_file: str) -> Dict[str, Any]:
         """Load a YAML file."""
-        with open(yaml_file, "r") as file:
-            return yaml.safe_load(file)
+        if yaml_file.endswith(".json"):
+            with open(yaml_file, "r") as file:
+                return json.load(file)
+        elif yaml_file.endswith(".yaml"):
+            with open(yaml_file, "r") as file:
+                return yaml.safe_load(file)
+        elif isinstance(yaml_file, str):
+            # Attempt to read the string as a yaml file.
+            result = yaml.safe_load(yaml_file)
+            if not isinstance(result, dict):
+                result = json.loads(yaml_file)
+                if not isinstance(result, dict):
+                    raise ValueError(f"Unknown file type: {yaml_file}")
+            return result
+        else:
+            raise ValueError(f"Unknown file type: {yaml_file}")
+    
 
     @staticmethod
     def load_secrets(secrets_file: str) -> Dict[str, str]:

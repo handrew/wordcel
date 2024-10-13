@@ -1,5 +1,6 @@
 """Node definitions."""
 import os
+import glob
 import json
 import shlex
 import yaml
@@ -98,11 +99,6 @@ class JSONDataFrameNode(Node):
         return True
 
 
-import os
-import glob
-from typing import Union, List, Dict
-import pandas as pd
-
 class FileDirectoryNode(Node):
     description = """Node to read text and markdown files from a directory or list of directories, supporting regex patterns."""
 
@@ -187,7 +183,8 @@ class StringTemplateNode(Node):
 
 
 class LLMNode(Node):
-    description = """Node to query an LLM API with a template. If given a string, it
+    description = """Node to query an LLM API with a template. Template must
+    contain "{input}" in order to substitute something in. If given a string, it
     will fill in the template and return the result. If given a DataFrame,
     it will turn the `input_column` into a list of strings, fill in the
     template for each string, and return a list of results."""
@@ -251,6 +248,10 @@ class LLMNode(Node):
         assert (
             "template" in self.config
         ), "LLMNode must have a 'template' configuration."
+        assert (
+            "input" in self.config
+        ), "LLMNode must have an 'input' configuration."
+        assert "{input}" in self.config["template"], "LLMNode template must contain '{input}'."
         return True
 
 
