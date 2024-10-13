@@ -32,4 +32,6 @@ def llm_filter(
             text_column=column,
             num_threads=num_threads,
         )
-    return df[results.str.lower() == "yes"]
+
+    results = results.str.lower().str.strip()
+    return df[results.str.lower().str.startswith("yes")]
