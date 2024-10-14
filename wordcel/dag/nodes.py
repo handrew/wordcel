@@ -376,22 +376,26 @@ class PythonScriptNode(Node):
     description = """Node to execute a Python script using subprocess."""
 
     def execute(self, input_data: Any) -> Any:
-        script_path = shlex.quote(self.config["script_path"])
-        args = self.config.get("args", [])
+        if input_data is not None:
+            if isinstance(input_data, pd.Series):
+                input_data = input_data.tolist()
+            elif isinstance(input_data, (str, int, float, complex, bool)):
+                input_data = [input_data]
+            elif isinstance(input_data, list):
+                input_data = input_data
+            else:
+                raise ValueError("Input data must be a primitive, list, or pandas Series.")
+        else:
+            # None if no input data, so that it runs once and appends
+            # nothing to the command.
+            input_data = [None]
 
         # Prepare the command.
+        script_path = shlex.quote(self.config["script_path"])
+        args = self.config.get("args", [])
         command = ["python", script_path]
-
-        # Handle input_data.
-        if input_data is not None:
-            if isinstance(input_data, list):
-                # Extend the command with the list elements.
-                command.extend([shlex.quote(str(item)) for item in input_data])
-            else:
-                raise ValueError("PythonScriptNode only accepts input_data of type list.")
-
-        # Add args from YAML config
         if args:
+            # Add args from YAML config.
             for arg in args:
                 if isinstance(arg, dict):
                     for k, v in arg.items():
@@ -399,29 +403,43 @@ class PythonScriptNode(Node):
                 else:
                     command.append(shlex.quote(str(arg)))
 
-        # Execute the script.
-        try:
-            result = subprocess.run(command, shell=False, stdout=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Script execution failed: {e.stderr}")
-        
-        # Handle node output.
-        output_file_key = "return_output_file"
-        return_stdout_key = "return_stdout"
-        if output_file_key in self.config:
-            assert self.config[output_file_key].endswith(
-                (".csv", ".json")
-            ), f"{output_file_key} must be a csv or json file."
+        # Prepare the results list and execute the script.
+        results = []
+        for item in input_data:
+            cmd = command.copy()
+            if item is not None:
+                cmd.append(shlex.quote(str(item)))
 
-            # Read the file and return the result.
-            if self.config[output_file_key].endswith(".csv"):
-                return pd.read_csv(self.config[output_file_key])
-            elif self.config[output_file_key].endswith(".json"):
-                with open(self.config[output_file_key], "r") as file:
-                    return json.load(file)
-        elif return_stdout_key in self.config:
-            stdout = result.stdout
-            return json.loads(stdout)
+            # Execute the script.
+            try:
+                subprocess_result = subprocess.run(cmd, shell=False, stdout=subprocess.PIPE)
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"Script execution failed: {e.stderr}")
+        
+            # Handle output.
+            output_file_key = "return_output_file"
+            return_stdout_key = "return_stdout"
+            if output_file_key in self.config:
+                assert self.config[output_file_key].endswith(
+                    (".csv", ".json")
+                ), f"{output_file_key} must be a csv or json file."
+
+                # Read the file and return the result.
+                if self.config[output_file_key].endswith(".csv"):
+                    result = pd.read_csv(self.config[output_file_key])
+                    results.append(result)
+                elif self.config[output_file_key].endswith(".json"):
+                    with open(self.config[output_file_key], "r") as file:
+                        result = json.load(file)
+                        results.append(result)
+            elif return_stdout_key in self.config:
+                result = subprocess_result.stdout.decode("utf-8").strip()
+                results.append(result)
+
+        if len(results) == 1:
+            return results[0]
+
+        return results
 
     def validate_config(self) -> bool:
         assert "script_path" in self.config, "PythonScript node must have a `script_path` configuration."

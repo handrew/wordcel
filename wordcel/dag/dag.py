@@ -234,8 +234,9 @@ class WordcelDAG:
             else:
                 results[node_id] = node.execute(incoming_input)
                 if not _is_json_serializable(results[node_id]):
+                    result_type = type(results[node_id]).__name__
                     raise ValueError(
-                        f"Node `{node_id}` returned non-serializable data."
+                        f"Node `{node_id}` of type `{result_type}` returned non-serializable data."
                     )
 
                 if self.backend:
