@@ -1,5 +1,6 @@
 """Node definitions."""
 import os
+import ast
 import glob
 import json
 import shlex
@@ -411,6 +412,7 @@ class PythonScriptNode(Node):
                 cmd.append(shlex.quote(str(item)))
 
             # Execute the script.
+            log.info("Attempting to execute command: " + shlex.join(cmd))
             try:
                 subprocess_result = subprocess.run(cmd, shell=False, stdout=subprocess.PIPE)
             except subprocess.CalledProcessError as e:
@@ -434,6 +436,7 @@ class PythonScriptNode(Node):
                         results.append(result)
             elif return_stdout_key in self.config:
                 result = subprocess_result.stdout.decode("utf-8").strip()
+                result = ast.literal_eval(result)
                 results.append(result)
 
         if len(results) == 1:
