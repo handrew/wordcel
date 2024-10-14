@@ -118,6 +118,8 @@ General parameters for all nodes:
 
 ### `csv` CSVNode
 
+Returns a pandas DataFrame.
+
 Required:
 - `path`: The file path to the CSV file.
 
@@ -153,6 +155,8 @@ Input data:
 
 ### `json` JSONNode
 
+Returns a `dict`.
+
 Required:
 - `path`: The file path to the JSON file.
 
@@ -170,6 +174,8 @@ Input data:
 
 ### `json_dataframe` JSONDataFrameNode
 
+This is just a wrapper over `pd.read_json`, so whatever works for `read_json` will work here too.
+
 Required:
 - `path`: The file path to the JSON file.
 
@@ -178,8 +184,6 @@ Optional:
 
 Input data:
 - Does not use any input data.
-
-This is just a wrapper over `pd.read_json`, so whatever works for `read_json` will work here too.
 
 ```yaml
 - id: load_json_as_dataframe
@@ -191,7 +195,7 @@ This is just a wrapper over `pd.read_json`, so whatever works for `read_json` wi
 
 ### `sql` SQLNode
 
-Returns a dataframe.
+Returns a pandas DataFrame.
 
 Required:
 - `query`: The SQL query to execute.
@@ -239,6 +243,8 @@ Input data:
 
 ### `llm` LLMNode
 
+Returns a string or list, depending on what is given.
+
 Required:
 - `template`: The prompt template for the LLM.
 
@@ -260,6 +266,8 @@ Input data:
 ```
 
 ### `llm_filter` LLMFilterNode
+
+Returns a pandas DataFrame, slimmed down from what was given. 
 
 Required:
 - `column`: The column to apply the filter on.
@@ -284,6 +292,8 @@ Input data:
 
 ### `file_writer` FileWriterNode
 
+Returns None, simply writes the file to the given path.
+
 Required:
 - `path`: The file path to write the output.
 
@@ -302,6 +312,9 @@ Input data:
 
 ### `dataframe_operation` DataFrameOperationNode
 
+This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too. Also supports `pd.concat` and `pd.merge` if given a list of DataFrames in the input_data. There is also a `set_column` operation as a wrapper around `df["column_name"] = series`, which requires a `column_name`, shown below.
+
+
 Required:
 - `operation`: The DataFrame operation to perform.
 
@@ -312,7 +325,6 @@ Optional:
 Input data:
 - DataFrame or list of DataFrames.
 
-This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too. Also supports `pd.concat` and `pd.merge` if given a list of DataFrames in the input_data. There is also a `set_column` operation as a wrapper around `df["column_name"] = series`, which requires a `column_name`, shown below.
 
 ```yaml
 - id: process_dataframe
@@ -341,15 +353,19 @@ dataframe_from_previous_node[new_col_name] = series_or_list_from_previous_node
 
 ### `python_script` PythonScriptNode
 
+Either returns a list consisting of attempts to read JSON from `stdout` from each execution, or from the `return_output_file` if given. Otherwise returns an empty list.
+
 Required:
 - `script_path`: The path to the Python script to execute.
-- `return_output_file` (str) or `return_stdout` (bool): Either the script must save its output to `return_output_file` or print a JSON-serializable string to stdout.
 
 Optional:
 - `args`: List of command-line arguments to pass to the script.
+- `return_stdout` (bool): Attempts to read JSON from whatever is printed to stdout.
+- `return_output_file` (str) or `return_stdout` (bool): Either the script must save its output to `return_output_file` or print a JSON-serializable string to stdout.
 
 Input data:
 - List of strings only, which are converted to command line arguments.
+
 
 ```yaml
 - id: run_custom_script
@@ -359,6 +375,8 @@ Input data:
 ```
 
 ### `dag` DAGNode
+
+Returns a `dict` of DAG results.
 
 Required:
 - `path`: The path to the YAML file defining the sub-DAG.
