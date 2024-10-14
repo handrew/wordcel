@@ -69,7 +69,13 @@ Commands:
 
 2. Edit the resulting yaml file according to your needs. You can use `wordcel dag visualize your_yaml_file.yaml visualization.png --custom-nodes /path/to/your/nodes.py` to save an image of your DAG to inspect visually.
 
-3. Once you are satisified, you can run `wordcel dag execute your_yaml_file.yaml --verbose` to run the DAG and get a nice output.
+3. Once you are satisfied, you can run `wordcel dag execute your_yaml_file.yaml --verbose` to run the DAG and get a nice output.
+
+The `--config` param for `execute` can be used to do a simple string template substitution in the YAML, in case you want to be able to pass in variables in the CLI at runtime. You might use:
+
+`wordcel dag execute pipeline.yaml -c key_to_replace your_value -c another_key another_value` to substitute `"${key_to_replace}"` and `"${another_key}"` wherever you it is found in the `pipeline.yaml` file.
+
+Similarly `--input` or `-i` can be used to give values to the DAG as if you were running `.execute(input_data=input_data)` in Python code, though it is not very ergonomic to give more complex values.
 
 
 ## DAG Configuration (YAML)
@@ -185,6 +191,8 @@ This is just a wrapper over `pd.read_json`, so whatever works for `read_json` wi
 
 ### `sql` SQLNode
 
+Returns a dataframe.
+
 Required:
 - `query`: The SQL query to execute.
 
@@ -203,6 +211,15 @@ Input data:
 
 ### `string_template` StringTemplateNode
 
+Constructs a string of the form:
+```
+# Header
+
+{template}
+```
+where `template` is repeated for each item, if given a list of dictionaries, pandas DataFrame (each row treated as a dict).
+
+
 Required:
 - template: String template using `${keyword}` format.
 
@@ -210,11 +227,12 @@ Optional:
 - None specific to this node. 
 
 Input data:
-- Expects input_data to be None, a dictionary, or a list of dictionaries. If None, you're just passing a string.
+- Expects input_data to be None, a dictionary, DataFrame, or a list of dictionaries. If None, you're just passing a string.
 
 ```yaml
 - id: format_string
   type: string_template
+  header: "# Header that is printed once"
   template: "Hello, ${name}! You are ${age} years old."
   input: previous_node_id
 ```
