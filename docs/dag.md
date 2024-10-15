@@ -15,13 +15,25 @@ While great projects in their own right, none of the above quite provided what I
 2. Making it easy to call and chain LLMs.
 3. Support for working with dataframes.
 
-## Key Features
+### Key Features
 
 - Define DAGs using YAML configuration files
 - Support for various built-in node types (CSV, SQL, LLM, DataFrame operations, etc.)
 - Extensibility through custom node types and functions
 - Secrets management for sensitive information
 - Visualization of DAG structure
+
+
+### Core Concepts
+
+- **Nodes**: The fundamental building blocks of a WordcelDAG. Each node represents a specific task or operation in the data processing pipeline.
+  - **Node types**: Pre-defined and user-defined node types that encapsulate specific computations (e.g., CSV loading, SQL queries, LLM operations).
+- **Edges**: Implicit connections between nodes, defined by the 'input' parameter in DAG configuration file. They determine the flow of data through the DAG.
+- **DAG structure and execution flow**: The overall structure of tasks, ensuring a directed and acyclic flow of operations. Nodes are executed in an order that respects their dependencies.
+- **YAML configuration**: The primary method for defining DAGs for readability and ease of maintenance.
+- **Caching and backends**: Pre-defined and user-defined systems for storing and retrieving intermediate results to optimize repeated executions.
+- **Secrets management**: Handling of sensitive information required for DAG execution.
+
 
 ## Basic Usage
 
