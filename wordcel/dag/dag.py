@@ -6,6 +6,7 @@ import yaml
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+from rich import print
 from typing import Dict, Any, Type, Callable
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
