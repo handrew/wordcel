@@ -297,8 +297,6 @@ class FileWriterNode(Node):
         with open(self.config["path"], "w") as file:
             file.write(str(input_data))
 
-        return input_data
-
     def validate_config(self) -> bool:
         assert (
             "path" in self.config

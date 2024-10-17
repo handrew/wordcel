@@ -1,7 +1,8 @@
 """DAG definition and node implementations."""
-
+import os
 import json
 import logging
+from string import Template
 import yaml
 import pandas as pd
 import networkx as nx
@@ -25,7 +26,7 @@ def create_node(
     node_class = NodeRegistry.get(node_type)
     if node_class is None:
         raise ValueError(
-            f"Unknown node type: {node_type}. You likely forgot to define its `type`, have it listed as an input somewhere without first creating the node, or haven't given a custom node."
+            f"Unknown node type: `{node_type}`. You likely forgot to define its `type`, have it listed as an input somewhere without first creating the node, or haven't given a custom node."
         )
 
     node = node_class(node_config, secrets, custom_functions=custom_functions)
@@ -64,18 +65,34 @@ class WordcelDAG:
         self,
         yaml_file: str,
         secrets_file: str = None,
+        runtime_config_params: Dict[str, str] = None,
         custom_functions: Dict[str, Callable] = None,
         custom_nodes: Dict[str, Type[Node]] = None,
         custom_backends: Dict[str, Type[Backend]] = None,
     ):
         """
         Initialize the DAG from a YAML file.
-        @param yaml_file: The path to the YAML file containing the DAG configuration.
-        @param secrets_file: The path to the YAML file containing the secrets.
+        @param yaml_file: The path to the YAML file containing the DAG
+        configuration.
+        @param secrets_file: The path to the YAML file containing the
+        secrets.
+        @param runtime_config_params: A dictionary of parameters to substitute
+        in the YAML file at runtime.
+        @param custom_functions: A dictionary of custom functions to register.
+        @param custom_nodes: A dictionary of custom nodes to register.
+        @param custom_backends: A dictionary of custom backends to register.
         """
         log.warning("This class is still experimental: use at your own risk.")
 
         # First load the configuration and secrets.
+        self.runtime_config_params = runtime_config_params
+        if self.runtime_config_params:
+            # If we are provided with config params, substitute them in the YAML file.
+            with open(yaml_file, "r") as f:
+                pipeline_content = f.read()
+            yaml_file = Template(pipeline_content).safe_substitute(
+                self.runtime_config_params
+            )
         self.config = WordcelDAG.load_yaml(yaml_file)
         self.name = self.config["dag"]["name"]
         self.backend_config = self.config["dag"].get("backend", {})
@@ -103,7 +120,8 @@ class WordcelDAG:
 
     @staticmethod
     def load_yaml(yaml_file: str) -> Dict[str, Any]:
-        """Load a YAML file."""
+        """Load a YAML (or JSON) file."""
+        yaml_file = os.path.expanduser(yaml_file)
         if yaml_file.endswith(".json"):
             with open(yaml_file, "r") as file:
                 return json.load(file)
@@ -200,6 +218,34 @@ class WordcelDAG:
                 raise ValueError(f"Error creating node {node_id}: {str(e)}")
         return nodes
 
+
+    def __prepare_incoming_input(self, input_data, results, node_id: str):
+        """Prepare the incoming input for a node."""
+        incoming_edges = self.graph.nodes[node_id].get("input")
+        incoming_input = None
+        if input_data and node_id in input_data:
+            # First check if the input data is given at runtime.
+            # If so, we don't need to look at the incoming edges.
+            assert (
+                incoming_edges is None
+            ), "Node cannot have both `input` and input data given at runtime."
+            incoming_input = input_data[node_id]
+        elif isinstance(incoming_edges, list):
+            incoming_input = [results[input_id] for input_id in incoming_edges]
+        else:
+            incoming_input = results.get(incoming_edges)
+
+        # TODO: Consider stuffing `runtime_config_params` into the input data
+        # so that nodes, specifically the DAG node, can access it.
+        return incoming_input
+    
+    def __check_result_is_json_serializable(self, results, node_id: str):
+        if not _is_json_serializable(results[node_id]):
+            result_type = type(results[node_id]).__name__
+            raise ValueError(
+                f"Node `{node_id}` returned type `{result_type}`, which either is not serializable or contains something, like a DataFrame, that is not serializable."
+            )
+
     def execute(self, input_data: Dict[str, Any] = None, verbose=False) -> Dict[str, Any]:
         """Execute the DAG.
 
@@ -213,38 +259,28 @@ class WordcelDAG:
             log.info(f"Executing node `{node_id}` from DAG `{self.name}`.")
             node = self.nodes[node_id]
 
-            # Get the incoming edges.
-            incoming_edges = self.graph.nodes[node_id].get("input")
-            incoming_input = None
-            if input_data and node_id in input_data:
-                # First check if the input data is given at runtime.
-                # If so, we don't need to look at the incoming edges.
-                assert (
-                    incoming_edges is None
-                ), "Node cannot have both `input` and input data given at runtime."
-                incoming_input = input_data[node_id]
-            elif isinstance(incoming_edges, list):
-                incoming_input = [results[input_id] for input_id in incoming_edges]
-            else:
-                incoming_input = results.get(incoming_edges)
-
+            # Get the incoming edges and their inputs.
+            incoming_input = self.__prepare_incoming_input(input_data, results, node_id)
+            
             # Check the cache, if we have a backend.
             if self.backend and self.backend.exists(node_id, incoming_input):
                 log.info(f"Loading node `{node_id}` from cache.")
                 results[node_id] = self.backend.load(node_id, incoming_input)
             else:
                 results[node_id] = node.execute(incoming_input)
-                if not _is_json_serializable(results[node_id]):
-                    result_type = type(results[node_id]).__name__
-                    raise ValueError(
-                        f"Node `{node_id}` of type `{result_type}` returned non-serializable data."
-                    )
 
-                if self.backend:
+                # If the node is not a DAG node, check if the result is JSON serializable.
+                is_dag_node = isinstance(node, NodeRegistry.get("dag"))
+                if not is_dag_node:
+                    self.__check_result_is_json_serializable(results, node_id)
+
+                # Don't save DAG nodes to cache, since they may have their own cache.
+                if self.backend and not is_dag_node:
                     log.info(f"Saving node `{node_id}` to cache.")
                     self.backend.save(node_id, incoming_input, results[node_id])
 
             if verbose:
                 print(f"Result for node {node_id}:")
                 print(results[node_id])
+
         return results
