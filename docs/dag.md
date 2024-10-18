@@ -15,19 +15,10 @@ While great projects in their own right, none of the above quite provided what I
 2. Making it easy to call and chain LLMs.
 3. Support for working with dataframes.
 
-### Key Features
-
-- Define DAGs using YAML configuration files
-- Support for various built-in node types (CSV, SQL, LLM, DataFrame operations, etc.)
-- Extensibility through custom node types and functions
-- Secrets management for sensitive information
-- Visualization of DAG structure
-
-
 ### Core Concepts
 
 - **Nodes**: The fundamental building blocks of a WordcelDAG. Each node represents a specific task or operation in the data processing pipeline.
-  - **Node types**: Pre-defined and user-defined node types that encapsulate specific computations (e.g., CSV loading, SQL queries, LLM operations).
+  - **Node types**: Pre-defined and user-defined (custom) node types that encapsulate specific computations (e.g., CSV loading, SQL queries, LLM operations).
 - **Edges**: Implicit connections between nodes, defined by the 'input' parameter in DAG configuration file. They determine the flow of data through the DAG.
 - **DAG structure and execution flow**: The overall structure of tasks, ensuring a directed and acyclic flow of operations. Nodes are executed in an order that respects their dependencies.
 - **YAML configuration**: The primary method for defining DAGs for readability and ease of maintenance.
@@ -85,7 +76,7 @@ Commands:
 
 The `--config` param for `execute` can be used to do a simple string template substitution in the YAML, in case you want to be able to pass in variables in the CLI at runtime. You might use:
 
-`wordcel dag execute pipeline.yaml -c key_to_replace your_value -c another_key another_value` to substitute `"${key_to_replace}"` and `"${another_key}"` wherever you it is found in the `pipeline.yaml` file.
+`wordcel dag execute pipeline.yaml -c key_to_replace your_value -c another_key another_value` to substitute `"${key_to_replace}"` and `"${another_key}"` wherever it is found in the `pipeline.yaml` file. (Note the `${}` templating with the dollar sign, as it is different than the `{}` templating done at the `LLMNode`, and the same templating as with `StringTemplateNode`. Make sure that your `runtime_config_params` do not overlap with the placeholders in the `StringTemplateNode`s).
 
 Similarly `--input` or `-i` can be used to give values to the DAG as if you were running `.execute(input_data=input_data)` in Python code, though it is not very ergonomic to give more complex values.
 
@@ -279,7 +270,7 @@ Input data:
 
 ### `llm_filter` LLMFilterNode
 
-Returns a pandas DataFrame, slimmed down from what was given. 
+Returns a pandas DataFrame, slimmed down from what was given. You *must* ask a yes or no question and instruct the LLM to answer with yes or no. 
 
 Required:
 - `column`: The column to apply the filter on.
@@ -521,7 +512,7 @@ nodes:
 
 ## Other Features
 
-- Secrets Management: Use a separate YAML file for sensitive information.
-- Custom Functions: Pass custom functions to be used in nodes.
+- Secrets management: Use a separate YAML file for sensitive information.
+- Custom functions: Pass custom functions to be used in nodes.
 - Backends: Use backends to cache node results and speed up repeated executions.
-- DAG Visualization: Use `dag.save_image("path/to/image.png")` to visualize your DAG.
+- DAG visualization: Use `dag.save_image("path/to/image.png")` to visualize your DAG.
