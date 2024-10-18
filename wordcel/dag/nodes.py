@@ -23,13 +23,16 @@ class Node(ABC):
         self,
         config: Dict[str, Any],
         secrets: Dict[str, str],
+        runtime_config_params = None,
         custom_functions: Dict[str, Callable] = None,
     ):
         self.config = config
         self.secrets = secrets
         self.functions = {}
+        self.runtime_config_params = runtime_config_params
         if custom_functions:
             self.functions.update(custom_functions)
+
 
     @abstractmethod
     def execute(self, input_data: Any) -> Any:
@@ -465,10 +468,13 @@ class DAGNode(Node):
             if key not in WordcelDAG.default_functions
         }
 
+        # We do not need to give the custom_backends or custom_nodes to the
+        # sub-DAG, as they are already in the registry.
         sub_dag = WordcelDAG(
             yaml_file=self.config["path"],
             secrets_file=self.config.get("secrets_path"),
             custom_functions=self.functions,
+            runtime_config_params=self.runtime_config_params,
         )
         return sub_dag.execute(input_data=input_data)
 

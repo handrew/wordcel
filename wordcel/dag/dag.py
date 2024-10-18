@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 def create_node(
     node_config: Dict[str, Any],
     secrets: Dict[str, str],
-
+    runtime_config_params: Dict[str, str] = None,
     custom_functions: Dict[str, Callable] = None,
 ) -> Node:
     node_type = node_config.get("type")
@@ -30,7 +30,12 @@ def create_node(
             f"Unknown node type: `{node_type}`. You likely forgot to define its `type`, have it listed as an input somewhere without first creating the node, or haven't given a custom node."
         )
 
-    node = node_class(node_config, secrets, custom_functions=custom_functions)
+    node = node_class(
+        node_config,
+        secrets,
+        runtime_config_params=runtime_config_params,
+        custom_functions=custom_functions
+    )
     node.validate_config()
     return node
 
@@ -213,7 +218,10 @@ class WordcelDAG:
         for node_id, node_config in self.graph.nodes(data=True):
             try:
                 nodes[node_id] = create_node(
-                    node_config, self.secrets, custom_functions=self.default_functions
+                    node_config,
+                    self.secrets,
+                    runtime_config_params=self.runtime_config_params,
+                    custom_functions=self.default_functions
                 )
             except ValueError as e:
                 raise ValueError(f"Error creating node {node_id}: {str(e)}")
