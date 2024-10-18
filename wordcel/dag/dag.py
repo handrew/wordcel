@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO)
 def create_node(
     node_config: Dict[str, Any],
     secrets: Dict[str, str],
+
     custom_functions: Dict[str, Callable] = None,
 ) -> Node:
     node_type = node_config.get("type")
@@ -223,7 +224,7 @@ class WordcelDAG:
         """Prepare the incoming input for a node."""
         incoming_edges = self.graph.nodes[node_id].get("input")
         incoming_input = None
-        if input_data and node_id in input_data:
+        if input_data and isinstance(input_data, dict) and node_id in input_data:
             # First check if the input data is given at runtime.
             # If so, we don't need to look at the incoming edges.
             assert (
@@ -235,8 +236,6 @@ class WordcelDAG:
         else:
             incoming_input = results.get(incoming_edges)
 
-        # TODO: Consider stuffing `runtime_config_params` into the input data
-        # so that nodes, specifically the DAG node, can access it.
         return incoming_input
     
     def __check_result_is_json_serializable(self, results, node_id: str):
