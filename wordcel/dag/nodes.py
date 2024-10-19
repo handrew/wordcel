@@ -58,7 +58,6 @@ class CSVNode(Node):
     description = """Node to read a CSV file."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
-        assert input_data is None, "CSVNode does not take input data."
         return pd.read_csv(self.config["path"])
 
     def validate_config(self) -> bool:
@@ -70,7 +69,6 @@ class YAMLNode(Node):
     description = """Node to read a YAML file."""
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
-        assert input_data is None, "YAMLNode does not take input data."
         with open(self.config["path"], "r") as file:
             return yaml.safe_load(file)
 
@@ -95,7 +93,6 @@ class JSONDataFrameNode(Node):
     description = """Node to read a JSON file into a pandas DataFrame."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
-        assert input_data is None, "JSONDataFrameNode does not take input data."
         return pd.read_json(self.config["path"], **self.config.get("read_json_kwargs", {}))
 
     def validate_config(self) -> bool:
@@ -107,7 +104,6 @@ class FileDirectoryNode(Node):
     description = """Node to read text and markdown files from a directory or list of directories, supporting regex patterns."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
-        assert input_data is None or isinstance(input_data, dict), "FileDirectoryNode does not take input data."
         paths = self.config.get("path")
         if isinstance(input_data, dict) and "path" in input_data:
             paths = input_data["path"]
@@ -144,7 +140,6 @@ class SQLNode(Node):
     description = """Node to execute a SQL query."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
-        assert input_data is None, "SQLNode does not take input data."
         connection_string = self.secrets["database_url"]
         read_sql_fn = self.functions.get("read_sql", read_sql)
         return read_sql_fn(self.config["query"], connection_string)
