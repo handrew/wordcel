@@ -438,7 +438,7 @@ class PythonScriptNode(Node):
                     with open(self.config[output_file_key], "r") as file:
                         result = json.load(file)
                         results.append(result)
-            elif return_stdout_key in self.config:
+            elif return_stdout_key in self.config and self.config[return_stdout_key]:
                 result = subprocess_result.stdout.decode("utf-8").strip()
                 result = ast.literal_eval(result)
                 results.append(result)
@@ -454,7 +454,9 @@ class PythonScriptNode(Node):
         # Assert that only one of output_file or return_stdout is present, but not both.
         has_output_file = "return_output_file" in self.config
         has_return_stdout = "return_stdout" in self.config
-        assert has_output_file != has_return_stdout, "PythonScript node must have either `output_file` or `return_stdout` configuration."
+        not_both = has_output_file != has_return_stdout
+        neither = not has_output_file and not has_return_stdout
+        assert not_both or neither, "PythonScript node must have either `output_file` or `return_stdout` configuration, or neither."
         return True
 
 
