@@ -254,7 +254,7 @@ class LLMNode(Node):
         if isinstance(input_data, pd.DataFrame):
             new_df = input_data.copy()
             new_df.loc[:, self.config["output_field"]] = results
-            return input_data
+            return new_df
         elif isinstance(input_data, pd.Series):
             return results  # Just keep it as a list.
         elif isinstance(input_data, list):
