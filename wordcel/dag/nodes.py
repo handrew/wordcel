@@ -162,7 +162,10 @@ class StringTemplateNode(Node):
         return_string = self.config.get("header", "") + "\n\n"
         if isinstance(input_data, list):
             for item in input_data:
-                return_string = return_string + template.safe_substitute(input=item) + "\n\n"
+                if isinstance(item, dict):
+                    return_string = return_string + template.safe_substitute(item) + "\n\n"
+                elif isinstance(item, str):
+                    return_string = return_string + template.safe_substitute(input=item) + "\n\n"
         elif isinstance(input_data, pd.DataFrame):
             records = input_data.to_dict(orient="records")
             for record in records:
