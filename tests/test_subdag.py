@@ -26,7 +26,8 @@ nodes:
   - id: llm_node
     type: llm
     input: head_node
-    key: Country
+    input_field: Country
+    output_field: Summary
     template: "Summarize this data: {input}"
 """
 

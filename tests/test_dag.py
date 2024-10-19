@@ -53,7 +53,8 @@ nodes:
     type: llm
     template: "What cuisine is this country known for? {input}"
     input: llm_filter
-    key: "Country"
+    input_field: "Country"
+    output_field: "Cuisine"
     num_threads: 2
 
   - id: save_results
@@ -121,19 +122,20 @@ nodes:
     type: dataframe_operation
     input: node1
     operation: head
-    args: [10]
+    args: [5]
 
   - id: node3
     type: dataframe_operation
     input: node1
     operation: tail
-    args: [10]
+    args: [5]
 
   - id: node4
     type: llm
     input: [node2, node3]
     template: "What is this country known for?: {input}"
-    key: "Country"
+    input_field: "Country"
+    output_field: "Known For"
 
   - id: node5
     input: node4

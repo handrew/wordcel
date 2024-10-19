@@ -246,13 +246,14 @@ Input data:
 
 ### `llm` LLMNode
 
-Returns a string or list, depending on what is given.
+Returns a string, list, or DataFrame, depending on what is given.
 
 Required:
 - `template`: The prompt template for the LLM.
 
 Optional:
-- `key`: The column name (if given a DataFrame) or field (if given dicts) to use as input when processing a DataFrame.
+- `input_field`: The column name (if given a DataFrame or list of DataFrames) or field (if given dicts) to use as input. 
+- `output_field`: The column name (if given a DataFrame or list of DataFrames) or field (if given dicts) to use as output. If DataFrame(s), then the new column will be named `output_field`. 
 - `model`: Which model to use. Supported models can be found in `wordcel.llms`, but is generally limited to OpenAI, Anthropic, Gemini.
 - `num_threads`: Number of threads for parallel processing (default: 1).
 
@@ -264,7 +265,8 @@ Input data:
   type: llm
   template: "Summarize the following text: {input}"
   input: previous_node_id
-  key: text_column
+  input_field: text_column
+  output_field: output_field
   num_threads: 4
 ```
 

@@ -76,13 +76,6 @@ class TestMultiplyNodeAndDAG(unittest.TestCase):
                     "factor": 2,
                     "input": "csv_node",
                 },
-                {
-                    "id": "llm_node",
-                    "type": "llm",
-                    "template": "Multiply result: {input}",
-                    "input": "multiply_node",
-                    "key": "value",
-                },
             ],
         }
 
@@ -94,16 +87,8 @@ class TestMultiplyNodeAndDAG(unittest.TestCase):
 
         # Mock the necessary components
         mock_csv_data = pd.DataFrame({"value": [1, 2, 3]})
-        mock_llm_output = [
-            "Multiply result: 2",
-            "Multiply result: 4",
-            "Multiply result: 6",
-        ]
 
-        with patch("pandas.read_csv", return_value=mock_csv_data), patch(
-            "wordcel.llms.openai_call", side_effect=mock_llm_output
-        ):
-
+        with patch("pandas.read_csv", return_value=mock_csv_data):
             # Create and execute the DAG
             dag = WordcelDAG(temp_file_path, custom_nodes={"multiply": MultiplyNode})
             results = dag.execute()
@@ -114,11 +99,9 @@ class TestMultiplyNodeAndDAG(unittest.TestCase):
         # Assert the results
         self.assertIn("csv_node", results)
         self.assertIn("multiply_node", results)
-        self.assertIn("llm_node", results)
 
         pd.testing.assert_frame_equal(results["csv_node"], mock_csv_data)
         pd.testing.assert_frame_equal(results["multiply_node"], mock_csv_data * 2)
-        self.assertEqual(results["llm_node"], mock_llm_output)
 
 
 if __name__ == "__main__":

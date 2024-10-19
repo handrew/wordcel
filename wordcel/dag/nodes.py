@@ -185,9 +185,8 @@ class LLMNode(Node):
     description = """Node to query an LLM API with a template. Template must
     contain "{input}" in order to substitute something in. If given a string,
     it will fill in the template and return the result. If given a DataFrame
-    or list of dicts, it will turn the column / field denoted by `key` into a
-    list of strings, fill in the template for each string, and return a list
-    of results."""
+    or list of dicts, it will turn the column / field denoted by `input_field`
+    into a list of strings, fill in the template for each string."""
 
     def execute(
         self, input_data: Union[str, List[str], pd.DataFrame]
@@ -205,19 +204,20 @@ class LLMNode(Node):
                 self.config["template"].format(input=input_data),
                 model=model
             )
+        # If it is a single dict, call the LLM once.
         elif isinstance(input_data, dict):
-            assert "key" in self.config, "LLMNode must have a 'key' configuration if given a dict."
+            assert "input_field" in self.config, "LLMNode must have a `input_field` configuration if given a dict."
             return llm_call(
-                self.config["template"].format(input=input_data[self.config["key"]]),
+                self.config["template"].format(input=input_data[self.config["input_field"]]),
                 model=model
             )
         
         # Turn input_data into a list of strings.
         if isinstance(input_data, pd.DataFrame):
-            # Assert that `key` is in the configuration.
-            assert "key" in self.config, "LLMNode must have a 'key' configuration for DataFrame or list of dicts."
+            # Assert that `input_field` is in the configuration.
+            assert "input_field" in self.config, "LLMNode must have a `input_field` configuration for DataFrame or list of dicts."
             # Turn it into a list of strings.
-            texts = input_data[self.config["key"]].tolist()
+            texts = input_data[self.config["input_field"]].tolist()
         elif isinstance(input_data, pd.Series):
             texts = input_data.tolist()
         elif isinstance(input_data, list):
@@ -229,12 +229,12 @@ class LLMNode(Node):
             if is_all_strings:
                 texts = input_data
             elif is_all_dicts:
-                texts = [item[self.config["key"]] for item in input_data]
+                texts = [item[self.config["input_field"]] for item in input_data]
             else:
-                assert "key" in self.config, "LLMNode must have a 'key' configuration for list of DataFrames."
+                assert "input_field" in self.config, "LLMNode must have a `input_field` configuration for list of DataFrames."
                 texts = []
                 for df in input_data:
-                    texts.extend(df[self.config["key"]].tolist())
+                    texts.extend(df[self.config["input_field"]].tolist())
 
         # Call the LLM in parallel.
         with concurrent.futures.ThreadPoolExecutor(
@@ -249,7 +249,30 @@ class LLMNode(Node):
                     texts,
                 )
             )
-        return results
+
+        # Now reshape the output to be compatible with the input.
+        if isinstance(input_data, pd.DataFrame):
+            new_df = input_data.copy()
+            new_df.loc[:, self.config["output_field"]] = results
+            return input_data
+        elif isinstance(input_data, pd.Series):
+            return results  # Just keep it as a list.
+        elif isinstance(input_data, list):
+            if is_all_strings:  # Case: list of strings.
+                return results
+            elif is_all_dicts:  # Case: list of dicts.
+                return [
+                    {**item, self.config["output_field"]: result}
+                    for item, result in zip(input_data, results)
+                ]
+            else:  # Case: list of DataFrames.
+                dfs = []
+                for df in input_data:
+                    new_df = df.copy()
+                    new_df.loc[:, self.config["output_field"]] = results[: len(df)]
+                    results = results[len(df) :]
+                    dfs.append(df)
+                return dfs
         
     def validate_config(self) -> bool:
         assert (
@@ -259,6 +282,10 @@ class LLMNode(Node):
             "input" in self.config
         ), "LLMNode must have an 'input' configuration."
         assert "{input}" in self.config["template"], "LLMNode template must contain '{input}'."
+
+        # If `input_field` in the configuration, then there must also be an `output_field`.
+        if "input_field" in self.config:
+            assert "output_field" in self.config, "LLMNode must have an `output_field` configuration if `field` is present."
         return True
 
 

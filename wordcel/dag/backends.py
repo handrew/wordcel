@@ -97,6 +97,12 @@ class LocalBackend(Backend):
                 data = {"__type__": "dataframe", "data": json_str}
             elif isinstance(data, pd.Series):
                 data = {"__type__": "series", "data": json_str}
+        elif isinstance(data, list):
+            # If it's a list of DataFrames, convert them to dicts.
+            data = [
+                v.to_json(orient="records") if isinstance(v, pd.DataFrame) else v
+                for v in data
+            ]
 
         cache_key = self.generate_cache_key(node_id, input_data)
         with open(self._get_path(cache_key), "w") as f:
