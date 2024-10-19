@@ -53,7 +53,7 @@ nodes:
     type: llm
     template: "What cuisine is this country known for? {input}"
     input: llm_filter
-    input_column: "Country"
+    key: "Country"
     num_threads: 2
 
   - id: save_results
@@ -132,7 +132,8 @@ nodes:
   - id: node4
     type: llm
     input: [node2, node3]
-    template: "Summarize this data: {input}"
+    template: "What is this country known for?: {input}"
+    key: "Country"
 
   - id: node5
     input: node4

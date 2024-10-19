@@ -252,7 +252,7 @@ Required:
 - `template`: The prompt template for the LLM.
 
 Optional:
-- `input_column`: The column name to use as input when processing a DataFrame.
+- `key`: The column name (if given a DataFrame) or field (if given dicts) to use as input when processing a DataFrame.
 - `model`: Which model to use. Supported models can be found in `wordcel.llms`, but is generally limited to OpenAI, Anthropic, Gemini.
 - `num_threads`: Number of threads for parallel processing (default: 1).
 
@@ -264,7 +264,7 @@ Input data:
   type: llm
   template: "Summarize the following text: {input}"
   input: previous_node_id
-  input_column: text_column
+  key: text_column
   num_threads: 4
 ```
 
@@ -502,7 +502,7 @@ nodes:
     type: llm
     template: "What cuisine is this country known for? {input}"
     input: llm_filter
-    input_column: "Country"
+    key: "Country"
 
   - id: save_results
     type: file_writer

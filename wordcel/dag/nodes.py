@@ -188,10 +188,11 @@ class StringTemplateNode(Node):
 
 class LLMNode(Node):
     description = """Node to query an LLM API with a template. Template must
-    contain "{input}" in order to substitute something in. If given a string, it
-    will fill in the template and return the result. If given a DataFrame,
-    it will turn the `input_column` into a list of strings, fill in the
-    template for each string, and return a list of results."""
+    contain "{input}" in order to substitute something in. If given a string,
+    it will fill in the template and return the result. If given a DataFrame
+    or list of dicts, it will turn the column / field denoted by `key` into a
+    list of strings, fill in the template for each string, and return a list
+    of results."""
 
     def execute(
         self, input_data: Union[str, List[str], pd.DataFrame]
@@ -200,54 +201,61 @@ class LLMNode(Node):
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
         model = self.config.get("model", "gpt-4o-mini")
-
         if num_threads > 1:
             log.info(f"Using {num_threads} threads for LLM Node.")
 
-        if isinstance(input_data, pd.DataFrame):
-            if "input_column" not in self.config:
-                raise ValueError(
-                    "LLMNode must have an 'input_column' configuration for DataFrames."
-                )
-            texts = input_data[self.config["input_column"]].tolist()
-            log.info(f"Using column {self.config['input_column']} as input.")
-
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=num_threads
-            ) as executor:
-                results = list(
-                    executor.map(
-                        lambda text: llm_call(
-                            self.config["template"].format(input=text),
-                            model=model
-                        ),
-                        texts,
-                    )
-                )
-
-            return results
-        elif isinstance(input_data, list) or isinstance(input_data, pd.Series):
-            if isinstance(input_data, pd.Series):
-                input_data = input_data.tolist()
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=num_threads
-            ) as executor:
-                results = list(
-                    executor.map(
-                        lambda text: llm_call(
-                            self.config["template"].format(input=text),
-                            model=model
-                        ),
-                        input_data,
-                    )
-                )
-            return results
-        else:
+        # If it's a single string, just call the LLM once.
+        if isinstance(input_data, str):
             return llm_call(
                 self.config["template"].format(input=input_data),
                 model=model
             )
+        elif isinstance(input_data, dict):
+            assert "key" in self.config, "LLMNode must have a 'key' configuration if given a dict."
+            return llm_call(
+                self.config["template"].format(input=input_data[self.config["key"]]),
+                model=model
+            )
+        
+        # Turn input_data into a list of strings.
+        if isinstance(input_data, pd.DataFrame):
+            # Assert that `key` is in the configuration.
+            assert "key" in self.config, "LLMNode must have a 'key' configuration for DataFrame or list of dicts."
+            # Turn it into a list of strings.
+            texts = input_data[self.config["key"]].tolist()
+        elif isinstance(input_data, pd.Series):
+            texts = input_data.tolist()
+        elif isinstance(input_data, list):
+            is_all_strings = all(isinstance(item, str) for item in input_data)
+            is_all_dicts = all(isinstance(item, dict) for item in input_data)
+            is_all_dataframes = all(isinstance(item, pd.DataFrame) for item in input_data)
 
+            assert is_all_strings or is_all_dicts or is_all_dataframes, "LLMNode input must be a list of strings, dicts, or DataFrames."
+            if is_all_strings:
+                texts = input_data
+            elif is_all_dicts:
+                texts = [item[self.config["key"]] for item in input_data]
+            else:
+                assert "key" in self.config, "LLMNode must have a 'key' configuration for list of DataFrames."
+                texts = []
+                for df in input_data:
+                    texts.extend(df[self.config["key"]].tolist())
+
+        # Call the LLM in parallel.
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=num_threads
+        ) as executor:
+            results = list(
+                executor.map(
+                    lambda text: llm_call(
+                        self.config["template"].format(input=text),
+                        model=model
+                    ),
+                    texts,
+                )
+            )
+        return results
+        
     def validate_config(self) -> bool:
         assert (
             "template" in self.config

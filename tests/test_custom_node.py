@@ -58,7 +58,7 @@ class TestMultiplyNodeAndDAG(unittest.TestCase):
         self.assertEqual(NodeRegistry.get("multiply"), MultiplyNode)
 
     def test_create_node(self):
-        from wordcel.dag import create_node
+        from wordcel.dag.dag import create_node
 
         NodeRegistry.register("multiply", MultiplyNode)
         node = create_node(self.config, self.secrets)
@@ -81,12 +81,14 @@ class TestMultiplyNodeAndDAG(unittest.TestCase):
                     "type": "llm",
                     "template": "Multiply result: {input}",
                     "input": "multiply_node",
-                    "input_column": "value",
+                    "key": "value",
                 },
             ],
         }
 
-        with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".yaml"
+        ) as temp_file:
             yaml.dump(dag_config, temp_file)
             temp_file_path = temp_file.name
 
@@ -99,7 +101,7 @@ class TestMultiplyNodeAndDAG(unittest.TestCase):
         ]
 
         with patch("pandas.read_csv", return_value=mock_csv_data), patch(
-            "wordcel.dag.openai_call", side_effect=mock_llm_output
+            "wordcel.llms.openai_call", side_effect=mock_llm_output
         ):
 
             # Create and execute the DAG

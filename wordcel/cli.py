@@ -37,7 +37,7 @@ nodes:
     type: llm
     template: "What cuisine is this country known for? {input}"
     input: llm_filter
-    input_column: "Country"
+    key: "Country"
 
 #   - id: save_results
 #     type: file_writer
