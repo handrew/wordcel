@@ -440,7 +440,10 @@ class PythonScriptNode(Node):
                         results.append(result)
             elif return_stdout_key in self.config and self.config[return_stdout_key]:
                 result = subprocess_result.stdout.decode("utf-8").strip()
-                result = ast.literal_eval(result)
+                try:
+                    result = ast.literal_eval(result)
+                except ValueError:
+                    raise ValueError(f"Could not properly eval the `stdout` of the PythonScriptNode output for command: {cmd}. Please make sure you are printing out well-formed JSON.")
                 results.append(result)
 
         if len(results) == 1:
