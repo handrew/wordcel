@@ -48,6 +48,13 @@ def _is_json_serializable(data: Any) -> bool:
             data.to_json(orient="records")
         elif hasattr(data, "to_json"):
             data.to_json()
+        elif isinstance(data, dict):
+            # Check keys for DataFrames.
+            for key, value in data.items():
+                if isinstance(value, pd.DataFrame):
+                    value.to_json(orient="records")
+                elif not _is_json_serializable(value):
+                    return False
         elif isinstance(data, list):
             is_all_dataframes_or_dicts = all(
                 isinstance(item, (pd.DataFrame, dict)) for item in data
