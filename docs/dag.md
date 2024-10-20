@@ -196,6 +196,26 @@ Input data:
     orient: records
 ```
 
+### `file_directory` FileDirectoryNode
+
+Reads txt, md, and html files from a directory or list of directories, supporting regex patterns.
+
+Required:
+- `path`: List or string. Can be regex.
+
+Optional:
+- None specific to this node.
+
+Input data:
+- Can use input data if it is a dict with `path`.
+
+```yaml
+- id: read_dir
+  type: file_directory
+  path: /paths/to/your/file.txt
+```
+
+
 ### `sql` SQLNode
 
 Returns a pandas DataFrame.
@@ -504,7 +524,8 @@ nodes:
     type: llm
     template: "What cuisine is this country known for? {input}"
     input: llm_filter
-    key: "Country"
+    input_field: "Country"
+    output_field: "Cuisine"
 
   - id: save_results
     type: file_writer
