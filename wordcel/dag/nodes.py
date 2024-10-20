@@ -506,13 +506,26 @@ class DAGNode(Node):
             if key not in WordcelDAG.default_functions
         }
 
+        # Construct the runtime_config_params. Check for conflicts between
+        # the DAG instantiation, the YAML definition.
+        runtime_config_params = {}
+        if self.runtime_config_params:  # From DAG instantiation in code.
+            runtime_config_params = self.runtime_config_params.copy()
+        if "runtime_config_params" in self.config:  # From the user.
+            # Check if there are any conflicts and raise an error if so.
+            conflicts = set(self.config["runtime_config_params"].keys()).intersection(
+                runtime_config_params.keys()
+            )
+            assert not conflicts, f"Runtime config params conflict between DAG instantiation and YAML definition: {conflicts}."
+            runtime_config_params.update(self.config["runtime_config_params"])
+
         # We do not need to give the custom_backends or custom_nodes to the
         # sub-DAG, as they are already in the registry.
         sub_dag = WordcelDAG(
             yaml_file=self.config["path"],
             secrets_file=self.config.get("secrets_path"),
             custom_functions=self.functions,
-            runtime_config_params=self.runtime_config_params,
+            runtime_config_params=runtime_config_params,
         )
         return sub_dag.execute(input_data=input_data)
 
