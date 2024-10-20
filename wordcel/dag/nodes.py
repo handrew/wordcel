@@ -517,6 +517,18 @@ class DAGNode(Node):
                 runtime_config_params.keys()
             )
             assert not conflicts, f"Runtime config params conflict between DAG instantiation and YAML definition: {conflicts}."
+
+            # If `from_input_data` is in the runtime_config_params, then
+            # we need to get the value from the input_data.
+            if "from_input_data" in self.config["runtime_config_params"]:
+                input_data_key = self.config["runtime_config_params"]["from_input_data"]
+                # If it's not present in the input_data, then assume that the user 
+                # wants to pass the entire input_data.
+                if input_data_key not in input_data:
+                    runtime_config_params[input_data_key] = input_data
+                else:
+                    runtime_config_params[input_data_key] = input_data[input_data_key]
+
             runtime_config_params.update(self.config["runtime_config_params"])
 
         # We do not need to give the custom_backends or custom_nodes to the

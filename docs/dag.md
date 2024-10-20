@@ -266,7 +266,7 @@ Input data:
 
 ### `llm` LLMNode
 
-Returns a string, list, or DataFrame, depending on what is given.
+Returns a string, list, or DataFrame, depending on what is given. In general, the philosophy is to return a mutated version of what is given to the LLM Node. So, if the node is given a dict or DataFrame, then it simply updates the dict / DataFrame with its answer (according to `output_field`). The exception is for a single dict - it will simply return a string.
 
 Required:
 - `template`: The prompt template for the LLM.
@@ -403,21 +403,34 @@ Input data:
 
 Returns a `dict` of DAG results.
 
-Required:
-- `path`: The path to the YAML file defining the sub-DAG.
-
-Optional:
-- `secrets_path`: The path to the secrets file for the sub-DAG.
-
-Input data:
-- None or a dictionary, simialr to how you might use `dag.execute`.
-
 ```yaml
 - id: sub_dag
   type: dag
   path: /path/to/sub_dag.yaml
   secrets_path: /path/to/sub_dag_secrets.yaml
 ```
+
+Required:
+- `path`: The path to the YAML file defining the sub-DAG.
+
+Optional:
+- `secrets_path`: The path to the secrets file for the sub-DAG.
+- `runtime_config_params`: Any runtime config params you want to provide. These are the string substitutions you do for "${param}" variables at runtime, e.g., from the CLI using `-c param value`. You can either define new ones, or get it from a previous node (see example below).
+
+```yaml
+- id: sub_dag
+  type: dag
+  path: /path/to/sub_dag.yaml
+  secrets_path: /path/to/sub_dag_secrets.yaml
+  runtime_config_params:
+    your_param: your param
+    from_input_data: 
+      input_param: subdag_param
+```
+If `input_param` is a key in your `input_data`, then it will grab that and map it to `subdag_param` config param. Otherwise, it will just pass the entire input_data through. The latter is useful if it's just a string, not a dict.
+
+Input data:
+- None or a dictionary, simialr to how you might use `dag.execute`.
 
 
 ## Defining Custom Functions
