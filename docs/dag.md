@@ -244,7 +244,7 @@ Constructs a string of the form:
 
 {template}
 ```
-where `template` is repeated for each item, if given a list of dictionaries, pandas DataFrame (each row treated as a dict).
+where `template` is repeated for each item, if given a list of dictionaries or pandas DataFrame (each row treated as a dict).
 
 
 Required:
@@ -252,6 +252,7 @@ Required:
 
 Optional:
 - None specific to this node. 
+- mode: "single" or "multiple". Default "single". If single, then it repeats the template for each item. If multiple, then it returns a list.
 
 Input data:
 - Expects input_data to be None, a dictionary, DataFrame, or a list of dictionaries. If None, you're just passing a string.
@@ -324,9 +325,10 @@ Required:
 
 Optional:
 - `None` specific to this node.
+- mode: "single" or "multiple". Default "single". If single, then it attempts to write the input data to a single file. If multiple, it will write multiple files, and requires `path` to have a string format placeholder "{i}" for the index of the item. 
 
 Input data:
-- String only.
+- String, list, or DataFrame.
 
 ```yaml
 - id: save_results

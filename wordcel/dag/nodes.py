@@ -158,18 +158,31 @@ class StringTemplateNode(Node):
 
     def execute(self, input_data: Union[Dict[str, Any], List[Dict[str, Any]], pd.DataFrame]) -> Union[str, List[str]]:
         template = Template(self.config["template"])
+        mode = self.config.get("mode", "single")
 
-        return_string = self.config.get("header", "") + "\n\n"
-        if isinstance(input_data, list):
-            for item in input_data:
-                if isinstance(item, dict):
-                    return_string = return_string + template.safe_substitute(item) + "\n\n"
-                elif isinstance(item, str):
-                    return_string = return_string + template.safe_substitute(input=item) + "\n\n"
-        elif isinstance(input_data, pd.DataFrame):
-            records = input_data.to_dict(orient="records")
-            for record in records:
-                return_string = return_string + template.safe_substitute(record) + "\n\n"
+        return_string = self.config.get("header", "")
+        if return_string:
+            return_string = return_string + "\n\n"
+
+        if isinstance(input_data, (list, pd.DataFrame)):
+            records = input_data
+            if isinstance(input_data, pd.DataFrame):
+                records = input_data.to_dict(orient="records")
+
+            if mode == "single":  # Single string output.
+                for item in records:
+                    if isinstance(item, dict):
+                        return_string = return_string + template.safe_substitute(item) + "\n\n"
+                    elif isinstance(item, str):
+                        return_string = return_string + template.safe_substitute(input=item) + "\n\n"
+            elif mode == "multiple":  # List of strings output.
+                return_items = [
+                    template.safe_substitute(item)
+                    if isinstance(item, dict)
+                    else template.safe_substitute(input=item)
+                    for item in records
+                ]
+                return return_items
         elif isinstance(input_data, dict):
             return_string = return_string + template.safe_substitute(input_data)
         elif isinstance(input_data, str):
@@ -181,6 +194,9 @@ class StringTemplateNode(Node):
 
     def validate_config(self) -> bool:
         assert "template" in self.config, "StringTemplateNode must have a 'template' configuration."
+        if "mode" in self.config:
+            modes_are_valid = self.config["mode"] in ["single", "multiple"]
+            assert modes_are_valid, "StringTemplateNode `mode` must be `single` or `multiple`."
         return True
 
 
@@ -339,13 +355,25 @@ class FileWriterNode(Node):
     description = """Node to write data to a file."""
 
     def execute(self, input_data: str) -> str:
-        with open(self.config["path"], "w") as file:
-            file.write(str(input_data))
+        mode = self.config.get("mode", "single")
+        if mode == "single":
+            with open(self.config["path"], "w") as file:
+                file.write(str(input_data))
+        elif mode == "multiple":
+            for i, data in enumerate(input_data):
+                with open(self.config["path"].format(i=i), "w") as file:
+                    file.write(str(data))
 
     def validate_config(self) -> bool:
         assert (
             "path" in self.config
         ), "FileWriterNode must have a 'path' configuration."
+        if "mode" in self.config:
+            modes_are_allowed = self.config["mode"] in ["single", "multiple"]
+            assert modes_are_allowed, "FileWriterNode `mode` must be `single` or `multiple`."
+
+            if self.config["mode"] == "multiple":
+                assert "{i}" in self.config["path"], "FileWriterNode `path` must contain \"{i}\" to format for `multiple` mode."
         return True
 
 
