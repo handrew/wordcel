@@ -127,10 +127,9 @@ class ContextualRetrieval:
             for doc_idx, doc_chunks in chunks:
                 for doc_chunk in doc_chunks:
                     situated_chunk = (
-                        situate_context(self.docs[doc_idx], doc_chunk)
+                        situate_context(self.docs[doc_idx], doc_chunk, llm_fn=self.llm_fn)
                         + "\n\n"
-                        + doc_chunk,
-                        llm_fn=self.llm_fn,
+                        + doc_chunk
                     )
                     situated_chunks.append((doc_idx, chunk_idx, situated_chunk))
                     chunk_idx += 1
