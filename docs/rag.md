@@ -33,7 +33,7 @@ Breaks down a text into chunks of a specified size.
 
 **Parameters:**
 - `text` (str): The input text to chunk.
-- `chunk_size` (int, optional): The size of each chunk. Default: 200
+- `chunk_size` (int, optional): The size of each chunk. Default: 1024
 - `chunk_overlap` (int, optional): The overlap between chunks. Default: 10
 
 **Returns:**
@@ -89,12 +89,12 @@ This file contains the `ContextualRetrieval` class, which implements a minimal v
 
 ```python
 class ContextualRetrieval:
-    def __init__(self, docs: List[str], chunk_size=200, chunk_overlap=10, llm_fn=anthropic_call)
+    def __init__(self, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=anthropic_call)
 ```
 
 **Parameters:**
 - `docs` (List[str]): List of documents to index.
-- `chunk_size` (int, optional): Size of each chunk. Default: 200
+- `chunk_size` (int, optional): Size of each chunk. Default: 1024
 - `chunk_overlap` (int, optional): Overlap between chunks. Default: 10
 - `llm_fn` (function, optional): Language model function to use. Default: `anthropic_call`
 

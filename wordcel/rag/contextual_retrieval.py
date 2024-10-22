@@ -45,32 +45,36 @@ Answer only with the succinct context and nothing else.
 """
 
 
-def situate_context(doc: str, chunk: str) -> str:
+def situate_context(doc: str, chunk: str, llm_fn=anthropic_call) -> str:
     """Situate a chunk within a document."""
-    client = anthropic.Anthropic()
-    response = client.beta.prompt_caching.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=1024,
-        temperature=0.0,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": DOCUMENT_CONTEXT_PROMPT.format(doc_content=doc),
-                        "cache_control": {"type": "ephemeral"},
-                    },
-                    {
-                        "type": "text",
-                        "text": CHUNK_CONTEXT_PROMPT.format(chunk_content=chunk),
-                    },
-                ],
-            }
-        ],
-        extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
-    )
-    return response.content[0].text
+    # client = anthropic.Anthropic()
+    # response = client.beta.prompt_caching.messages.create(
+    #     model="claude-3-haiku-20240307",
+    #     max_tokens=1024,
+    #     temperature=0.0,
+    #     messages=[
+    #         {
+    #             "role": "user",
+    #             "content": [
+    #                 {
+    #                     "type": "text",
+    #                     "text": DOCUMENT_CONTEXT_PROMPT.format(doc_content=doc),
+    #                     "cache_control": {"type": "ephemeral"},
+    #                 },
+    #                 {
+    #                     "type": "text",
+    #                     "text": CHUNK_CONTEXT_PROMPT.format(chunk_content=chunk),
+    #                 },
+    #             ],
+    #         }
+    #     ],
+    #     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+    # )
+    # return response.content[0].text
+    doc_context = DOCUMENT_CONTEXT_PROMPT.format(doc_content=doc)
+    chunk_context = CHUNK_CONTEXT_PROMPT.format(chunk_content=chunk)
+    response = llm_fn(doc_context + chunk_context)
+    return response
 
 
 class ContextualRetrieval:
@@ -89,14 +93,14 @@ class ContextualRetrieval:
         self.tfidf_index = None
 
     @classmethod
-    def from_documents(cls, docs: List[str], llm_fn=anthropic_call):
-        instance = cls(docs, llm_fn=llm_fn)
+    def from_documents(cls, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=anthropic_call):
+        instance = cls(docs, chunk_size=chunk_size, chunk_overlap=chunk_overlap, llm_fn=llm_fn)
         instance.index_documents()
         return instance
 
     @classmethod
-    def from_saved(cls, path: str):
-        instance = cls([], llm_fn=None)  # Create an empty instance
+    def from_saved(cls, path: str, chunk_size=1024, chunk_overlap=10, llm_fn=anthropic_call):
+        instance = cls([], chunk_size=chunk_size, chunk_overlap=chunk_overlap, llm_fn=llm_fn)
         instance.load(path)
         return instance
 
@@ -125,7 +129,8 @@ class ContextualRetrieval:
                     situated_chunk = (
                         situate_context(self.docs[doc_idx], doc_chunk)
                         + "\n\n"
-                        + doc_chunk
+                        + doc_chunk,
+                        llm_fn=self.llm_fn,
                     )
                     situated_chunks.append((doc_idx, chunk_idx, situated_chunk))
                     chunk_idx += 1
@@ -167,7 +172,7 @@ class ContextualRetrieval:
             self.tfidf_vectorizer = data["tfidf_vectorizer"]
 
     def retrieve(
-        self, query: str, top_k: int = 5, semantic_weight=0.5, tfidf_weight=0.5
+        self, query: str, top_k: int = 5, semantic_weight=0.8, tfidf_weight=0.2
     ) -> List[Dict]:
         """Retrieve the top-k chunks for a given query."""
         if self.chunks is None or self.embeddings is None or self.tfidf_index is None:
@@ -235,8 +240,8 @@ class ContextualRetrieval:
         search_query: str,
         generation_query: str = None,
         top_k: int = 5,
-        semantic_weight=0.5,
-        tfidf_weight=0.5,
+        semantic_weight=0.8,
+        tfidf_weight=0.2,
         llm_fn=anthropic_call,
     ) -> str:
         """Retrieves top-k chunks using `search_query` and generates the
