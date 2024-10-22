@@ -198,7 +198,7 @@ Input data:
 
 ### `file_directory` FileDirectoryNode
 
-Reads txt, md, and html files from a directory or list of directories, supporting regex patterns.
+Reads txt, md, and html files from a directory or list of directories, supporting regex patterns. Returns a DataFrame of columns: `file_path`, `content`, `file_type`.
 
 Required:
 - `path`: List or string. Can be regex.
