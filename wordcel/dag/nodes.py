@@ -191,6 +191,12 @@ class LLMNode(Node):
     or list of dicts, it will turn the column / field denoted by `input_field`
     into a list of strings, fill in the template for each string."""
 
+    def _try_to_load_as_json(self, text: str) -> Union[str, dict]:
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return text
+
     def execute(
         self, input_data: Union[str, List[str], pd.DataFrame]
     ) -> Union[str, List[str]]:
@@ -203,17 +209,19 @@ class LLMNode(Node):
 
         # If it's a single string, just call the LLM once.
         if isinstance(input_data, str):
-            return llm_call(
+            response = llm_call(
                 self.config["template"].format(input=input_data),
                 model=model
             )
+            return self._try_to_load_as_json(response)
         # If it is a single dict, call the LLM once.
         elif isinstance(input_data, dict):
             assert "input_field" in self.config, "LLMNode must have a `input_field` configuration if given a dict."
-            return llm_call(
+            response = llm_call(
                 self.config["template"].format(input=input_data[self.config["input_field"]]),
                 model=model
             )
+            return self._try_to_load_as_json(response)
         
         # Turn input_data into a list of strings.
         if isinstance(input_data, pd.DataFrame):
@@ -252,6 +260,7 @@ class LLMNode(Node):
                     texts,
                 )
             )
+        results = [self._try_to_load_as_json(result) for result in results]
 
         # Now reshape the output to be compatible with the input.
         if isinstance(input_data, pd.DataFrame):
