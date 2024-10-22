@@ -3,7 +3,7 @@
 import json
 import numpy as np
 from typing import List
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sklearn.feature_extraction.text import TfidfVectorizer
 from ..llms import openai_call, openai_embed
 
@@ -32,7 +32,7 @@ def generate_similar_queries(query, llm_fn=openai_call):
 
 def chunk_text(text: str, chunk_size: int = 200, chunk_overlap: int = 10) -> List[str]:
     """Break down a text into chunks of a specified size."""
-    text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
+    text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     chunks = text_splitter.split_text(text)
