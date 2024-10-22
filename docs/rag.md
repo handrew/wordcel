@@ -121,10 +121,10 @@ Loads a saved ContextualRetrieval instance from a file.
 #### index_documents
 
 ```python
-def index_documents(self)
+def index_documents(self, situate=False)
 ```
 
-Indexes the documents by chunking, embedding, and creating a TF-IDF index.
+Indexes the documents by chunking, embedding, and creating a TF-IDF index. "Situating" each chunk is a computationally expensive set of inferences, so it is set to False by default.
 
 #### save
 

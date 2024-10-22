@@ -104,7 +104,7 @@ class ContextualRetrieval:
         instance.load(path)
         return instance
 
-    def index_documents(self):
+    def index_documents(self, situate=False):
         """Index the documents by chunking, embedding, and creating a TF-IDF index."""
         log.info("Indexing documents...")
         if self.chunks is None:
@@ -121,16 +121,20 @@ class ContextualRetrieval:
                 for doc_idx, doc in enumerate(self.docs)
             ]
 
-            log.info("Situating chunks within documents...")
+            if situate:
+                log.info("Situating chunks within documents...")
             situated_chunks = []
             chunk_idx = 0
             for doc_idx, doc_chunks in chunks:
                 for doc_chunk in doc_chunks:
-                    situated_chunk = (
-                        situate_context(self.docs[doc_idx], doc_chunk, llm_fn=self.llm_fn)
-                        + "\n\n"
-                        + doc_chunk
-                    )
+                    if situate:
+                        situated_chunk = (
+                            situate_context(self.docs[doc_idx], doc_chunk, llm_fn=self.llm_fn)
+                            + "\n\n"
+                            + doc_chunk
+                        )
+                    else:
+                        situated_chunk = doc_chunk
                     situated_chunks.append((doc_idx, chunk_idx, situated_chunk))
                     chunk_idx += 1
             self.chunks = pd.DataFrame(
@@ -153,6 +157,7 @@ class ContextualRetrieval:
         with open(path, "wb") as f:
             pickle.dump(
                 {
+                    "docs": self.docs,
                     "chunks": self.chunks.to_dict(orient="records"),
                     "embeddings": self.embeddings,
                     "tfidf_index": self.tfidf_index,
@@ -165,6 +170,7 @@ class ContextualRetrieval:
         """Load a saved retriever from a file."""
         with open(path, "rb") as f:
             data = pickle.load(f)
+            self.docs = data["docs"]
             self.chunks = pd.DataFrame(data["chunks"])
             self.embeddings = data["embeddings"]
             self.tfidf_index = data["tfidf_index"]
