@@ -8,7 +8,7 @@ SUPPORTED_MODELS = {
     "gpt-4o-mini": "gpt-4o-mini",
     "gpt-4o": "gpt-4o",
     "haiku": "claude-3-haiku-20240307",
-    "sonnet": "claude-3-5-sonnet-20240620",
+    "sonnet": "claude-3-5-sonnet-latest",
     "gemini-1.5-flash": "gemini-1.5-flash-002",
     "gemini-1.5-pro": "gemini-1.5-pro-002",
 }
@@ -19,9 +19,9 @@ def llm_call(prompt, model="haiku", **kwargs):
     error_msg = f"Model {model} not supported. Supported models: {SUPPORTED_MODELS.keys()}"
     assert model in SUPPORTED_MODELS, error_msg
     if model in ["gpt-4o-mini", "gpt-4o"]:
-        return openai_call(prompt, model=model, **kwargs)
+        return openai_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
     elif model == "gemini-1.5-flash" or model == "gemini-1.5-pro":
-        return gemini_call(prompt, model=model, **kwargs)
+        return gemini_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
     elif model in ["haiku", "sonnet"]:
         return anthropic_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
     else:
@@ -31,7 +31,7 @@ def llm_call(prompt, model="haiku", **kwargs):
 def anthropic_call(
     prompt,
     system_prompt="You are a helpful assistant.",
-    model="claude-3-haiku-20240307",
+    model=SUPPORTED_MODELS["haiku"],
     temperature=0,
     max_tokens=1024,
 ):
@@ -105,7 +105,7 @@ def gemini_call(
     generation_config = {
         "temperature": temperature,
         "top_p": 0.95,
-        "top_k": 64,
+        "top_k": 40,
         "max_output_tokens": max_tokens,
         "response_mime_type": "text/plain",
     }
