@@ -582,7 +582,20 @@ class DAGNode(Node):
             custom_functions=self.functions,
             runtime_config_params=runtime_config_params,
         )
-        return sub_dag.execute(input_data=input_data)
+        dag_results = sub_dag.execute(input_data=input_data)
+
+        # The dag_results are a dict. If self.config has param `output_key`,
+        # then return the value of that key.
+        if self.config.get("output_key"):
+            output_keys = self.config["output_key"]
+            log.info(f"Returning results for output key in DAGNode: {output_keys}")
+            if isinstance(output_keys, list):
+                return {key: dag_results[key] for key in output_keys} 
+            elif isinstance(output_keys, str):
+                return dag_results[output_keys]
+            else:
+                raise ValueError(f"DAGNOde `output_key` must be a string or a list of strings.")
+        return dag_results
 
     def validate_config(self) -> bool:
         assert "path" in self.config, "DAGNode must have a 'path' configuration."

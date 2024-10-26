@@ -416,6 +416,7 @@ Required:
 - `path`: The path to the YAML file defining the sub-DAG.
 
 Optional:
+- `output_key`: String or list. Since a DAG returns a dict of its results, `output_key` lets us select one or more of intermediate results. If str, then simply selects the results for that key. If `list`, then it gives you a subset of the result dict.
 - `secrets_path`: The path to the secrets file for the sub-DAG.
 - `runtime_config_params`: Any runtime config params you want to provide. These are the string substitutions you do for "${param}" variables at runtime, e.g., from the CLI using `-c param value`. You can either define new ones, or get it from a previous node (see example below).
 
