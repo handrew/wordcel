@@ -58,7 +58,8 @@ class CSVNode(Node):
     description = """Node to read a CSV file."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
-        return pd.read_csv(self.config["path"])
+        path = os.path.expanduser(self.config["path"])
+        return pd.read_csv(path)
 
     def validate_config(self) -> bool:
         assert "path" in self.config, "CSVNode must have a 'path' configuration."
@@ -69,7 +70,8 @@ class YAMLNode(Node):
     description = """Node to read a YAML file."""
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
-        with open(self.config["path"], "r") as file:
+        path = os.path.expanduser(self.config["path"])
+        with open(path, "r") as file:
             return yaml.safe_load(file)
 
     def validate_config(self) -> bool:
@@ -81,7 +83,8 @@ class JSONNode(Node):
     description = """Node to read a JSON file."""
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
-        with open(self.config["path"], "r") as file:
+        path = os.path.expanduser(self.config["path"])
+        with open(path, "r") as file:
             return json.load(file)
 
     def validate_config(self) -> bool:
@@ -93,7 +96,8 @@ class JSONDataFrameNode(Node):
     description = """Node to read a JSON file into a pandas DataFrame."""
 
     def execute(self, input_data: Any) -> pd.DataFrame:
-        return pd.read_json(self.config["path"], **self.config.get("read_json_kwargs", {}))
+        path = os.path.expanduser(self.config["path"])
+        return pd.read_json(path, **self.config.get("read_json_kwargs", {}))
 
     def validate_config(self) -> bool:
         assert "path" in self.config, "JSONDataFrameNode must have a 'path' configuration."
@@ -119,7 +123,7 @@ class FileDirectoryNode(Node):
         for path in paths:
             for file_path in glob.glob(path, recursive=True):
                 if file_path.lower().endswith(('.txt', '.md', '.html')):
-                    with open(file_path, 'r', encoding='utf-8') as file:
+                    with open(os.path.expanduser(file_path), 'r', encoding='utf-8') as file:
                         content = file.read()
                         file_contents.append({
                             'file_path': file_path,
@@ -357,11 +361,13 @@ class FileWriterNode(Node):
     def execute(self, input_data: str) -> str:
         mode = self.config.get("mode", "single")
         if mode == "single":
-            with open(self.config["path"], "w") as file:
+            path = os.path.expanduser(self.config["path"])
+            with open(path, "w") as file:
                 file.write(str(input_data))
         elif mode == "multiple":
             for i, data in enumerate(input_data):
-                with open(self.config["path"].format(i=i), "w") as file:
+                path = os.path.expanduser(self.config["path"].format(i=i))
+                with open(path, "w") as file:
                     file.write(str(data))
 
     def validate_config(self) -> bool:
@@ -571,7 +577,7 @@ class DAGNode(Node):
         # We do not need to give the custom_backends or custom_nodes to the
         # sub-DAG, as they are already in the registry.
         sub_dag = WordcelDAG(
-            yaml_file=self.config["path"],
+            yaml_file=os.path.expanduser(self.config["path"]),
             secrets_file=self.config.get("secrets_path"),
             custom_functions=self.functions,
             runtime_config_params=runtime_config_params,
