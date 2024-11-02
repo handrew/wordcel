@@ -8,7 +8,7 @@
 
 WordcelDAG is a flexible framework for defining and executing Directed Acyclic Graphs (DAGs) of data processing tasks, particularly involving LLMs and dataframes. 
 
-There are plenty of great Pythonic DAG execution frameworks out there. Metaflow is great for data science pipelines; Prefect, Luigi, and Dagster for data pipelines; I really liked ControlFlow for agentic workflows. Rivet by Ironclad was probably the closest thing to what I wanted, but it didn't have great support for Python, and you had to use a visual canvas (as with Flowise, LangFlow, etc).
+There are plenty of great Pythonic DAG execution frameworks out there. Metaflow is great for data science pipelines; Prefect, Luigi, and Dagster for data pipelines; I really liked ControlFlow and Burr for agentic workflows. Rivet by Ironclad was probably the closest thing to what I wanted, but it didn't have great support for Python, and you had to use a visual canvas (as with Flowise, LangFlow, etc).
 
 While great projects in their own right, none of the above quite provided what I was looking for. Accordingly, the underlying motivation for WordcelDAG was to create a DAG framework with a few things in mind: 
 1. YAML as a first-class citizen. I didn't want to be writing and maintaining Python, or drawing on a visual canvas.
@@ -400,6 +400,58 @@ Input data:
   script_path: /path/to/your/script.py
   args: ["arg1", "arg2"]
 ```
+
+
+### `python_function` PythonFunctionNode
+
+Executes a specific Python function from a module or script. Returns whatever the function returns.
+
+Required:
+- `module_path`: Path to Python file or module name (e.g., 'os.path' or '/path/to/script.py')
+- `function_name`: Name of the function to execute
+
+Optional:
+- `args`: List of positional arguments to pass to the function
+- `kwargs`: Dictionary of keyword arguments to pass to the function
+- `mode`: How to handle input data (default: "arg")
+  - "arg": Pass input as first argument
+  - "kwarg": Pass input as a named argument (requires `input_kwarg`)
+  - "ignore": Don't pass input to function
+- `input_kwarg`: Required if mode is "kwarg". The keyword argument name for the input data.
+
+Input data:
+- Any type. Handling depends on `mode` setting.
+
+Examples:
+
+```yaml
+# Basic usage (input as first arg)
+- id: process_data
+  type: python_function
+  module_path: my_module.py
+  function_name: process_function
+
+# With named argument
+- id: process_data
+  type: python_function
+  module_path: my_module.py
+  function_name: process_function
+  mode: kwarg
+  input_kwarg: data
+
+# Ignore input, use only configured args
+- id: standalone_function
+  type: python_function
+  module_path: my_module.py
+  function_name: standalone_function
+  mode: ignore
+  args:
+    - arg1
+    - arg2
+  kwargs:
+    param1: value1
+```
+
 
 ### `dag` DAGNode
 

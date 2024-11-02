@@ -5,6 +5,7 @@ import glob
 import json
 import shlex
 import yaml
+import importlib
 import subprocess
 from string import Template
 import pandas as pd
@@ -536,6 +537,70 @@ class PythonScriptNode(Node):
         return True
 
 
+class PythonFunctionNode(Node):
+    description = """Node to execute a specific Python function from a module or script. 
+    Input handling modes:
+    - 'arg': Pass input as first argument (default)
+    - 'kwarg': Pass input as a named argument (requires input_kwarg)
+    - 'ignore': Don't pass input to function
+    """
+
+    def execute(self, input_data: Any) -> Any:
+        # Import the module and get the function
+        module_path = os.path.expanduser(self.config["module_path"])
+        function_name = self.config["function_name"]
+        
+        # If it's a .py file, load it as a module
+        if module_path.endswith('.py'):
+            module_name = os.path.splitext(os.path.basename(module_path))[0]
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        else:
+            # Otherwise, assume it's a module path (e.g., 'os.path')
+            module = importlib.import_module(module_path)
+        
+        # Get the function from the module
+        if not hasattr(module, function_name):
+            raise ValueError(f"Function '{function_name}' not found in module '{module_path}'")
+        function = getattr(module, function_name)
+        
+        # Prepare arguments
+        args = self.config.get("args", [])
+        kwargs = self.config.get("kwargs", {})
+        
+        # Handle input data if provided
+        if input_data is not None:
+            mode = self.config.get("mode", "arg")
+            if mode == "arg":
+                args = [input_data] + args
+            elif mode == "kwarg":
+                input_kwarg = self.config["input_kwarg"]
+                kwargs[input_kwarg] = input_data
+            elif mode == "ignore":
+                pass
+            else:
+                raise ValueError(f"Unknown mode: {mode}")
+        
+        # Execute the function
+        return function(*args, **kwargs)
+
+    def validate_config(self) -> bool:
+        assert "module_path" in self.config, "PythonFunctionNode must have a 'module_path' configuration."
+        assert "function_name" in self.config, "PythonFunctionNode must have a 'function_name' configuration."
+        
+        if "mode" in self.config:
+            valid_modes = ["arg", "kwarg", "ignore"]
+            assert self.config["mode"] in valid_modes, \
+                f"mode must be one of: {valid_modes}"
+            
+            if self.config["mode"] == "kwarg":
+                assert "input_kwarg" in self.config, \
+                    "`input_kwarg` must be specified when mode is `kwarg`"
+        
+        return True
+
+
 class DAGNode(Node):
     description = """Node to execute a sub-DAG defined in a YAML file."""
 
@@ -615,6 +680,7 @@ NODE_TYPES: Dict[str, Type[Node]] = {
     "file_writer": FileWriterNode,
     "dataframe_operation": DataFrameOperationNode,
     "python_script": PythonScriptNode,
+    "python_function": PythonFunctionNode,
     "dag": DAGNode,
 }
 
