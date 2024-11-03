@@ -1,214 +1,145 @@
-import os
 import unittest
-import tempfile
-import yaml
+import os
+import pandas as pd
 from wordcel.dag import WordcelDAG
 
 class TestPythonFunctionNode(unittest.TestCase):
     def setUp(self):
-        # Create a temporary directory for our test files
-        self.test_dir = tempfile.mkdtemp()
-        
-        # Create a test functions file
-        self.functions_path = os.path.join(self.test_dir, 'test_functions.py')
-        with open(self.functions_path, 'w') as f:
+        # Create a temporary test function file
+        self.test_functions_path = "test_functions.py"
+        with open(self.test_functions_path, "w") as f:
             f.write("""
-def add_numbers(a, b):
+def add_numbers(a, b=1):
     return a + b
 
-def process_data(data, prefix='', suffix=''):
-    if isinstance(data, list):
-        return [f"{prefix}{item}{suffix}" for item in data]
-    return f"{prefix}{data}{suffix}"
+def multiply_by_two(x):
+    return x * 2
 
-def process_with_kwarg(prefix='', suffix='', data=None):
-    if isinstance(data, list):
-        return [f"{prefix}{item}{suffix}" for item in data]
-    return f"{prefix}{data}{suffix}"
-
-def standalone_function():
-    return "standalone result"
+def process_text(text, prefix=""):
+    return prefix + text.upper()
 """)
 
-    def create_dag_config(self, nodes):
-        """Helper to create a DAG config file"""
-        config = {
-            "dag": {
-                "name": "test_dag"
-            },
-            "nodes": nodes
-        }
-        
-        config_path = os.path.join(self.test_dir, 'test_config.yaml')
-        with open(config_path, 'w') as f:
-            yaml.dump(config, f)
-        
-        return config_path
-
-    def test_simple_function_call(self):
-        """Test calling a simple function with direct arguments"""
-        nodes = [{
-            "id": "add_numbers",
-            "type": "python_function",
-            "module_path": self.functions_path,
-            "function_name": "add_numbers",
-            "mode": "ignore",  # Don't use input
-            "args": [5, 3]
-        }]
-        
-        config_path = self.create_dag_config(nodes)
-        dag = WordcelDAG(config_path)
-        results = dag.execute()
-        
-        self.assertEqual(results["add_numbers"], 8)
-
-    def test_function_with_arg_input(self):
-        """Test calling a function with input data as first argument (default mode)"""
-        nodes = [
-            {
-                "id": "input_data",
-                "type": "python_function",
-                "module_path": self.functions_path,
-                "function_name": "process_data",
-                "mode": "ignore",
-                "args": [["apple", "banana", "cherry"]],
-                "kwargs": {"prefix": "fruit_"}
-            },
-            {
-                "id": "process_fruits",
-                "type": "python_function",
-                "module_path": self.functions_path,
-                "function_name": "process_data",
-                "input": "input_data",
-                # mode: "arg" is default
-                "kwargs": {"suffix": "_processed"}
-            }
-        ]
-        
-        config_path = self.create_dag_config(nodes)
-        dag = WordcelDAG(config_path)
-        results = dag.execute()
-        
-        expected = [
-            "fruit_apple_processed",
-            "fruit_banana_processed",
-            "fruit_cherry_processed"
-        ]
-        self.assertEqual(results["process_fruits"], expected)
-
-    def test_function_with_kwarg_input(self):
-        """Test calling a function with input data as keyword argument"""
-        nodes = [
-            {
-                "id": "input_data",
-                "type": "python_function",
-                "module_path": self.functions_path,
-                "function_name": "process_data",
-                "mode": "ignore",
-                "args": [["apple", "banana", "cherry"]],
-                "kwargs": {"prefix": "fruit_"}
-            },
-            {
-                "id": "process_fruits",
-                "type": "python_function",
-                "module_path": self.functions_path,
-                "function_name": "process_with_kwarg",
-                "input": "input_data",
-                "mode": "kwarg",
-                "input_kwarg": "data",
-                "kwargs": {"prefix": "processed_", "suffix": "_done"}
-            }
-        ]
-        
-        config_path = self.create_dag_config(nodes)
-        dag = WordcelDAG(config_path)
-        results = dag.execute()
-        
-        expected = [
-            "processed_fruit_apple_done",
-            "processed_fruit_banana_done",
-            "processed_fruit_cherry_done"
-        ]
-        self.assertEqual(results["process_fruits"], expected)
-
-    def test_function_ignore_input(self):
-        """Test calling a function while ignoring input data"""
-        nodes = [
-            {
-                "id": "input_data",
-                "type": "python_function",
-                "module_path": self.functions_path,
-                "function_name": "process_data",
-                "mode": "ignore",
-                "args": [["apple", "banana", "cherry"]]
-            },
-            {
-                "id": "standalone",
-                "type": "python_function",
-                "module_path": self.functions_path,
-                "function_name": "standalone_function",
-                "input": "input_data",
-                "mode": "ignore"
-            }
-        ]
-        
-        config_path = self.create_dag_config(nodes)
-        dag = WordcelDAG(config_path)
-        results = dag.execute()
-        
-        self.assertEqual(results["standalone"], "standalone result")
-
-    def test_invalid_mode(self):
-        """Test error handling for invalid mode"""
-        nodes = [{
-            "id": "invalid_mode",
-            "type": "python_function",
-            "module_path": self.functions_path,
-            "function_name": "process_data",
-            "mode": "invalid_mode"
-        }]
-        
-        config_path = self.create_dag_config(nodes)
-        
-        with self.assertRaises(AssertionError):
-            dag = WordcelDAG(config_path)
-            dag.execute()
-
-    def test_missing_input_kwarg(self):
-        """Test error handling for missing input_kwarg in kwarg mode"""
-        nodes = [{
-            "id": "missing_input_kwarg",
-            "type": "python_function",
-            "module_path": self.functions_path,
-            "function_name": "process_data",
-            "mode": "kwarg"  # Missing input_kwarg
-        }]
-        
-        config_path = self.create_dag_config(nodes)
-        
-        with self.assertRaises(AssertionError):
-            dag = WordcelDAG(config_path)
-            dag.execute()
-
-    def test_invalid_function(self):
-        """Test error handling for invalid function"""
-        nodes = [{
-            "id": "invalid_function",
-            "type": "python_function",
-            "module_path": self.functions_path,
-            "function_name": "nonexistent_function"
-        }]
-        
-        config_path = self.create_dag_config(nodes)
-        
-        with self.assertRaises(ValueError):
-            dag = WordcelDAG(config_path)
-            dag.execute()
-
     def tearDown(self):
-        # Clean up temporary files
-        import shutil
-        shutil.rmtree(self.test_dir)
+        # Clean up the temporary file
+        if os.path.exists(self.test_functions_path):
+            os.remove(self.test_functions_path)
+
+    def test_single_mode_simple(self):
+        # Test YAML for simple single mode operation
+        yaml_content = """
+dag:
+  name: test_python_function_single
+nodes:
+  - id: add_numbers
+    type: python_function
+    module_path: test_functions.py
+    function_name: add_numbers
+    mode: single
+    kwargs:
+      a: 5
+      b: 3
+"""
+        dag = WordcelDAG(yaml_content)
+        results = dag.execute()
+        self.assertEqual(results['add_numbers'], 8)
+
+    def test_single_mode_with_input(self):
+        # Test YAML for single mode with input
+        yaml_content = """
+dag:
+  name: test_python_function_single_input
+nodes:
+  - id: multiply
+    type: python_function
+    module_path: test_functions.py
+    function_name: multiply_by_two
+    mode: single
+    input_kwarg: x
+"""
+        dag = WordcelDAG(yaml_content)
+        results = dag.execute(input_data={'multiply': 5})
+        self.assertEqual(results['multiply'], 10)
+
+    def test_multiple_mode_with_dataframe(self):
+        # Test YAML for multiple mode with DataFrame
+        yaml_content = """
+dag:
+  name: test_python_function_multiple
+nodes:
+  - id: process_texts
+    type: python_function
+    module_path: test_functions.py
+    function_name: process_text
+    mode: multiple
+    input_field: text
+    output_column: processed_text
+    kwargs:
+      prefix: "PREFIX_"
+"""
+        # Create test DataFrame
+        df = pd.DataFrame({
+            'text': ['hello', 'world', 'test']
+        })
+        
+        dag = WordcelDAG(yaml_content)
+        results = dag.execute(input_data={'process_texts': df})
+        
+        expected_results = ['PREFIX_HELLO', 'PREFIX_WORLD', 'PREFIX_TEST']
+        self.assertListEqual(
+            results['process_texts']['processed_text'].tolist(),
+            expected_results
+        )
+
+    def test_multiple_mode_with_list(self):
+        # Test YAML for multiple mode with list input
+        yaml_content = """
+dag:
+  name: test_python_function_multiple_list
+nodes:
+  - id: multiply_numbers
+    type: python_function
+    module_path: test_functions.py
+    function_name: multiply_by_two
+    mode: multiple
+"""
+        input_list = [1, 2, 3, 4, 5]
+        
+        dag = WordcelDAG(yaml_content)
+        results = dag.execute(input_data={'multiply_numbers': input_list})
+        
+        expected_results = [2, 4, 6, 8, 10]
+        self.assertListEqual(results['multiply_numbers'], expected_results)
+
+    def test_chained_nodes(self):
+        # Test YAML for chaining multiple Python function nodes
+        yaml_content = """
+dag:
+  name: test_python_function_chain
+nodes:
+  - id: multiply_first
+    type: python_function
+    module_path: test_functions.py
+    function_name: multiply_by_two
+    mode: single
+    input_kwarg: x
+
+  - id: add_numbers
+    type: python_function
+    module_path: test_functions.py
+    function_name: add_numbers
+    mode: single
+    input: multiply_first
+    input_kwarg: a
+    kwargs:
+      b: 5
+"""
+        dag = WordcelDAG(yaml_content)
+        results = dag.execute(input_data={'multiply_first': 3})
+        
+        # First node should multiply 3 by 2 = 6
+        # Second node should add 5 to 6 = 11
+        self.assertEqual(results['multiply_first'], 6)
+        self.assertEqual(results['add_numbers'], 11)
 
 if __name__ == '__main__':
     unittest.main()

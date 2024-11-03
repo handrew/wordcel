@@ -407,17 +407,15 @@ Input data:
 Executes a specific Python function from a module or script. Returns whatever the function returns.
 
 Required:
-- `module_path`: Path to Python file or module name (e.g., 'os.path' or '/path/to/script.py')
-- `function_name`: Name of the function to execute
+- `module_path`: Path to Python file or module name (e.g., 'os.path' or '/path/to/script.py').
+- `function_name`: Name of the function to execute.
+- `mode`: Either `single` or `multiple`. `single` by default. If given `multiple`, then will process iterables item by item.
+- If the input data is a DataFrame, then must give `input_field` and `output_field`. 
 
 Optional:
 - `args`: List of positional arguments to pass to the function
 - `kwargs`: Dictionary of keyword arguments to pass to the function
-- `mode`: How to handle input data (default: "arg")
-  - "arg": Pass input as first argument
-  - "kwarg": Pass input as a named argument (requires `input_kwarg`)
-  - "ignore": Don't pass input to function
-- `input_kwarg`: Required if mode is "kwarg". The keyword argument name for the input data.
+- `input_kwarg`: If given, gives the input data as this keyword arg.
 
 Input data:
 - Any type. Handling depends on `mode` setting.

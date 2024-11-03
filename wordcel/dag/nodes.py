@@ -539,65 +539,94 @@ class PythonScriptNode(Node):
 
 class PythonFunctionNode(Node):
     description = """Node to execute a specific Python function from a module or script. 
-    Input handling modes:
-    - 'arg': Pass input as first argument (default)
-    - 'kwarg': Pass input as a named argument (requires input_kwarg)
-    - 'ignore': Don't pass input to function
-    """
+    Supports two modes:
+    - 'single': passes the entire input as a single argument
+    - 'multiple': iterates through input data (list, Series, DataFrame column) and calls function for each item"""
 
     def execute(self, input_data: Any) -> Any:
-        # Import the module and get the function
+        # Import the module and get the function.
         module_path = os.path.expanduser(self.config["module_path"])
         function_name = self.config["function_name"]
+        mode = self.config.get("mode", "single")
         
-        # If it's a .py file, load it as a module
+        # If it's a .py file, load it as a module.
         if module_path.endswith('.py'):
             module_name = os.path.splitext(os.path.basename(module_path))[0]
             spec = importlib.util.spec_from_file_location(module_name, module_path)
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
         else:
-            # Otherwise, assume it's a module path (e.g., 'os.path')
+            # Otherwise, assume it's a module path (e.g., 'os.path').
             module = importlib.import_module(module_path)
         
-        # Get the function from the module
+        # Get the function from the module.
         if not hasattr(module, function_name):
             raise ValueError(f"Function '{function_name}' not found in module '{module_path}'")
         function = getattr(module, function_name)
         
-        # Prepare arguments
+        # Prepare arguments.
         args = self.config.get("args", [])
         kwargs = self.config.get("kwargs", {})
+
+        if mode == "single":
+            # Handle input data if provided (single mode).
+            if input_data is not None:
+                if self.config.get("input_kwarg"):
+                    kwargs[self.config["input_kwarg"]] = input_data
+                else:
+                    args = [input_data] + args
+            return function(*args, **kwargs)
         
-        # Handle input data if provided
-        if input_data is not None:
-            mode = self.config.get("mode", "arg")
-            if mode == "arg":
-                args = [input_data] + args
-            elif mode == "kwarg":
-                input_kwarg = self.config["input_kwarg"]
-                kwargs[input_kwarg] = input_data
-            elif mode == "ignore":
-                pass
+        elif mode == "multiple":
+            # Handle different types of input data for multiple mode.
+            if input_data is None:
+                raise ValueError("Input data cannot be None in 'multiple' mode")
+            
+            # Convert input_data to a list of items to process.
+            if isinstance(input_data, pd.DataFrame):
+                # For DataFrame, require column_name config.
+                if "input_field" not in self.config:
+                    raise ValueError("`input_field` must be specified in config when using DataFrame input in 'multiple' mode")
+                items = input_data[self.config["input_field"]].tolist()
+            elif isinstance(input_data, pd.Series):
+                items = input_data.tolist()
+            elif isinstance(input_data, (list, tuple)):
+                items = input_data
             else:
-                raise ValueError(f"Unknown mode: {mode}")
-        
-        # Execute the function
-        return function(*args, **kwargs)
+                raise ValueError(f"Input type `{type(input_data)}` not supported in 'multiple' mode")
+
+            # Process each item.
+            results = []
+            for item in items:
+                item_args = args.copy()
+                item_kwargs = kwargs.copy()
+                
+                if self.config.get("input_kwarg"):
+                    item_kwargs[self.config["input_kwarg"]] = item
+                else:
+                    item_args = [item] + item_args
+                
+                results.append(function(*item_args, **item_kwargs))
+
+            # If input was a DataFrame, return results in the same format.
+            if isinstance(input_data, pd.DataFrame):
+                input_data = input_data.copy()
+                output_column = self.config.get("output_column", "result")
+                input_data[output_column] = results
+                return input_data
+            
+            return results
+
+        else:
+            raise ValueError(f"Unknown mode: {mode}. Must be `single` or `multiple`.")
 
     def validate_config(self) -> bool:
         assert "module_path" in self.config, "PythonFunctionNode must have a 'module_path' configuration."
         assert "function_name" in self.config, "PythonFunctionNode must have a 'function_name' configuration."
         
         if "mode" in self.config:
-            valid_modes = ["arg", "kwarg", "ignore"]
-            assert self.config["mode"] in valid_modes, \
-                f"mode must be one of: {valid_modes}"
+            assert self.config["mode"] in ["single", "multiple"], "Mode must be either `single` or `multiple`."
             
-            if self.config["mode"] == "kwarg":
-                assert "input_kwarg" in self.config, \
-                    "`input_kwarg` must be specified when mode is `kwarg`"
-        
         return True
 
 
