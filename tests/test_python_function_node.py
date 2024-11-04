@@ -32,8 +32,7 @@ dag:
 nodes:
   - id: add_numbers
     type: python_function
-    module_path: test_functions.py
-    function_name: add_numbers
+    function_path: test_functions.add_numbers
     mode: single
     kwargs:
       a: 5
@@ -51,8 +50,7 @@ dag:
 nodes:
   - id: multiply
     type: python_function
-    module_path: test_functions.py
-    function_name: multiply_by_two
+    function_path: test_functions.multiply_by_two
     mode: single
     input_kwarg: x
 """
@@ -68,8 +66,7 @@ dag:
 nodes:
   - id: process_texts
     type: python_function
-    module_path: test_functions.py
-    function_name: process_text
+    function_path: test_functions.process_text
     mode: multiple
     input_field: text
     output_column: processed_text
@@ -98,8 +95,7 @@ dag:
 nodes:
   - id: multiply_numbers
     type: python_function
-    module_path: test_functions.py
-    function_name: multiply_by_two
+    function_path: test_functions.multiply_by_two
     mode: multiple
 """
         input_list = [1, 2, 3, 4, 5]
@@ -118,15 +114,13 @@ dag:
 nodes:
   - id: multiply_first
     type: python_function
-    module_path: test_functions.py
-    function_name: multiply_by_two
+    function_path: test_functions.multiply_by_two
     mode: single
     input_kwarg: x
 
   - id: add_numbers
     type: python_function
-    module_path: test_functions.py
-    function_name: add_numbers
+    function_path: test_functions.add_numbers
     mode: single
     input: multiply_first
     input_kwarg: a
@@ -140,6 +134,7 @@ nodes:
         # Second node should add 5 to 6 = 11
         self.assertEqual(results['multiply_first'], 6)
         self.assertEqual(results['add_numbers'], 11)
+
 
 if __name__ == '__main__':
     unittest.main()

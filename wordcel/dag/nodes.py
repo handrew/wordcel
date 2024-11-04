@@ -1,5 +1,6 @@
 """Node definitions."""
 import os
+import sys
 import ast
 import glob
 import json
@@ -538,91 +539,98 @@ class PythonScriptNode(Node):
 
 
 class PythonFunctionNode(Node):
-    description = """Node to execute a specific Python function from a module or script. 
+    description = """Node to execute a specific Python function using a dotted path.
     Supports two modes:
     - 'single': passes the entire input as a single argument
-    - 'multiple': iterates through input data (list, Series, DataFrame column) and calls function for each item"""
+    - 'multiple': iterates through input data (list, Series, DataFrame column) and calls function for each item
+    
+    Function path should be in the format: package.module.function_name or local.module.function_name."""
 
     def execute(self, input_data: Any) -> Any:
-        # Import the module and get the function.
-        module_path = os.path.expanduser(self.config["module_path"])
-        function_name = self.config["function_name"]
+        # Get the function using the dotted path
+        function_path = self.config["function_path"]
         mode = self.config.get("mode", "single")
         
-        # If it's a .py file, load it as a module.
-        if module_path.endswith('.py'):
-            module_name = os.path.splitext(os.path.basename(module_path))[0]
-            spec = importlib.util.spec_from_file_location(module_name, module_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-        else:
-            # Otherwise, assume it's a module path (e.g., 'os.path').
+        # Split the path into module path and function name
+        try:
+            module_path, function_name = function_path.rsplit('.', 1)
+        except ValueError:
+            raise ValueError(f"Invalid function path: {function_path}. Must be in the format `package.module.function_name` or `local.module.function_name`.")
+        
+        # Temporarily add current directory to Python path to support local imports
+        cwd = os.getcwd()
+        sys.path.insert(0, cwd)
+        
+        try:
+            # Import the module
             module = importlib.import_module(module_path)
-        
-        # Get the function from the module.
-        if not hasattr(module, function_name):
-            raise ValueError(f"Function '{function_name}' not found in module '{module_path}'")
-        function = getattr(module, function_name)
-        
-        # Prepare arguments.
-        args = self.config.get("args", [])
-        kwargs = self.config.get("kwargs", {})
-
-        if mode == "single":
-            # Handle input data if provided (single mode).
-            if input_data is not None:
-                if self.config.get("input_kwarg"):
-                    kwargs[self.config["input_kwarg"]] = input_data
-                else:
-                    args = [input_data] + args
-            return function(*args, **kwargs)
-        
-        elif mode == "multiple":
-            # Handle different types of input data for multiple mode.
-            if input_data is None:
-                raise ValueError("Input data cannot be None in 'multiple' mode")
             
-            # Convert input_data to a list of items to process.
-            if isinstance(input_data, pd.DataFrame):
-                # For DataFrame, require column_name config.
-                if "input_field" not in self.config:
-                    raise ValueError("`input_field` must be specified in config when using DataFrame input in 'multiple' mode")
-                items = input_data[self.config["input_field"]].tolist()
-            elif isinstance(input_data, pd.Series):
-                items = input_data.tolist()
-            elif isinstance(input_data, (list, tuple)):
-                items = input_data
+            # Get the function from the module
+            if not hasattr(module, function_name):
+                raise ValueError(f"Function `{function_name}` not found in module `{module_path}`.")
+            function = getattr(module, function_name)
+            
+            # Prepare arguments
+            args = self.config.get("args", [])
+            kwargs = self.config.get("kwargs", {})
+
+            if mode == "single":
+                # Handle input data if provided (single mode)
+                if input_data is not None:
+                    if self.config.get("input_kwarg"):
+                        kwargs[self.config["input_kwarg"]] = input_data
+                    else:
+                        args = [input_data] + args
+                return function(*args, **kwargs)
+            
+            elif mode == "multiple":
+                # Handle different types of input data for multiple mode
+                if input_data is None:
+                    raise ValueError("Input data cannot be None in `multiple` mode.")
+                
+                # Convert input_data to a list of items to process
+                if isinstance(input_data, pd.DataFrame):
+                    if "input_field" not in self.config:
+                        raise ValueError("`input_field` must be specified in config when using DataFrame input in `multiple` mode.")
+                    items = input_data[self.config["input_field"]].tolist()
+                elif isinstance(input_data, pd.Series):
+                    items = input_data.tolist()
+                elif isinstance(input_data, (list, tuple)):
+                    items = input_data
+                else:
+                    raise ValueError(f"Input type `{type(input_data)}` not supported in `multiple` mode.")
+
+                # Process each item
+                results = []
+                for item in items:
+                    item_args = args.copy()
+                    item_kwargs = kwargs.copy()
+                    
+                    if self.config.get("input_kwarg"):
+                        item_kwargs[self.config["input_kwarg"]] = item
+                    else:
+                        item_args = [item] + item_args
+                    
+                    results.append(function(*item_args, **item_kwargs))
+
+                # If input was a DataFrame, return results in the same format
+                if isinstance(input_data, pd.DataFrame):
+                    input_data = input_data.copy()
+                    output_column = self.config.get("output_column", "result")
+                    input_data[output_column] = results
+                    return input_data
+                
+                return results
+
             else:
-                raise ValueError(f"Input type `{type(input_data)}` not supported in 'multiple' mode")
-
-            # Process each item.
-            results = []
-            for item in items:
-                item_args = args.copy()
-                item_kwargs = kwargs.copy()
+                raise ValueError(f"Unknown mode: {mode}. Must be `single` or `multiple`.")
                 
-                if self.config.get("input_kwarg"):
-                    item_kwargs[self.config["input_kwarg"]] = item
-                else:
-                    item_args = [item] + item_args
-                
-                results.append(function(*item_args, **item_kwargs))
-
-            # If input was a DataFrame, return results in the same format.
-            if isinstance(input_data, pd.DataFrame):
-                input_data = input_data.copy()
-                output_column = self.config.get("output_column", "result")
-                input_data[output_column] = results
-                return input_data
-            
-            return results
-
-        else:
-            raise ValueError(f"Unknown mode: {mode}. Must be `single` or `multiple`.")
+        finally:
+            # Remove the temporarily added path
+            sys.path.remove(cwd)
 
     def validate_config(self) -> bool:
-        assert "module_path" in self.config, "PythonFunctionNode must have a 'module_path' configuration."
-        assert "function_name" in self.config, "PythonFunctionNode must have a 'function_name' configuration."
+        assert "function_path" in self.config, "PythonFunctionNode must have a `function_path` configuration."
         
         if "mode" in self.config:
             assert self.config["mode"] in ["single", "multiple"], "Mode must be either `single` or `multiple`."
@@ -668,6 +676,17 @@ class DAGNode(Node):
 
             runtime_config_params.update(self.config["runtime_config_params"])
 
+        # Check for `input_nodes` in the configuration.
+        # It should be a list of `node_id`s where the input data should be
+        # passed to the sub-DAG.
+        mapped_input = {}
+        if "input_nodes" in self.config:
+            input_nodes = self.config["input_nodes"]
+            for node_id in input_nodes:
+                mapped_input[node_id] = input_data
+        else:
+            mapped_input = input_data
+            
         # We do not need to give the custom_backends or custom_nodes to the
         # sub-DAG, as they are already in the registry.
         sub_dag = WordcelDAG(
@@ -676,7 +695,7 @@ class DAGNode(Node):
             custom_functions=self.functions,
             runtime_config_params=runtime_config_params,
         )
-        dag_results = sub_dag.execute(input_data=input_data)
+        dag_results = sub_dag.execute(input_data=mapped_input)
 
         # The dag_results are a dict. If self.config has param `output_key`,
         # then return the value of that key.
@@ -693,6 +712,8 @@ class DAGNode(Node):
 
     def validate_config(self) -> bool:
         assert "path" in self.config, "DAGNode must have a 'path' configuration."
+        if "input_nodes" in self.config:
+            assert isinstance(self.config["input_nodes"], list), "DAGNode `input_nodes` must be a list."
         return True
 
 

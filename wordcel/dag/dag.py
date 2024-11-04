@@ -249,7 +249,7 @@ class WordcelDAG:
         """Prepare the incoming input for a node."""
         incoming_edges = self.graph.nodes[node_id].get("input")
         incoming_input = None
-        if input_data and isinstance(input_data, dict) and node_id in input_data:
+        if input_data is not None and isinstance(input_data, dict) and node_id in input_data:
             # First check if the input data is given at runtime.
             # If so, we don't need to look at the incoming edges.
             assert (

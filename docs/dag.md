@@ -407,8 +407,7 @@ Input data:
 Executes a specific Python function from a module or script. Returns whatever the function returns.
 
 Required:
-- `module_path`: Path to Python file or module name (e.g., 'os.path' or '/path/to/script.py').
-- `function_name`: Name of the function to execute.
+- `function_path`: Function path should be in the format: package.module.function_name or local.module.function_name.
 - `mode`: Either `single` or `multiple`. `single` by default. If given `multiple`, then will process iterables item by item.
 - If the input data is a DataFrame, then must give `input_field` and `output_field`. 
 
@@ -430,8 +429,7 @@ Examples:
 nodes:
   - id: add_numbers
     type: python_function
-    module_path: my_functions.py
-    function_name: add_one
+    function_path: my_functions.add_one
     mode: single
     input: 5  # Returns 6
 
@@ -442,8 +440,7 @@ nodes:
 nodes:
   - id: uppercase_words
     type: python_function
-    module_path: text_utils.py
-    function_name: uppercase
+    function_path: text_utils.uppercase
     mode: multiple
     input: ["hello", "world"]  # Returns ["HELLO", "WORLD"]
 
@@ -454,8 +451,7 @@ nodes:
 nodes:
   - id: analyze_reviews
     type: python_function
-    module_path: sentiment.py
-    function_name: analyze_sentiment
+    function_path: sentiment.analyze_sentiment
     mode: multiple
     input_field: review_text
     output_field: sentiment
@@ -480,6 +476,7 @@ Required:
 Optional:
 - `output_key`: String or list. Since a DAG returns a dict of its results, `output_key` lets us select one or more of intermediate results. If str, then simply selects the results for that key. If `list`, then it gives you a subset of the result dict.
 - `secrets_path`: The path to the secrets file for the sub-DAG.
+- `input_nodes`: List of `node_id`s to give the `input_data` to. 
 - `runtime_config_params`: Any runtime config params you want to provide. These are the string substitutions you do for "${param}" variables at runtime, e.g., from the CLI using `-c param value`. You can either define new ones, or get it from a previous node (see example below).
 
 ```yaml
