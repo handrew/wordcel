@@ -423,31 +423,43 @@ Input data:
 Examples:
 
 ```yaml
-# Basic usage (input as first arg)
-- id: process_data
-  type: python_function
-  module_path: my_module.py
-  function_name: process_function
+# Example 1: Basic usage with a simple function
+# my_functions.py:
+# def add_one(x):
+#     return x + 1
+nodes:
+  - id: add_numbers
+    type: python_function
+    module_path: my_functions.py
+    function_name: add_one
+    mode: single
+    input: 5  # Returns 6
 
-# With named argument
-- id: process_data
-  type: python_function
-  module_path: my_module.py
-  function_name: process_function
-  mode: kwarg
-  input_kwarg: data
+# Example 2: Multiple mode with a list input
+# text_utils.py:
+# def uppercase(text):
+#     return text.upper()
+nodes:
+  - id: uppercase_words
+    type: python_function
+    module_path: text_utils.py
+    function_name: uppercase
+    mode: multiple
+    input: ["hello", "world"]  # Returns ["HELLO", "WORLD"]
 
-# Ignore input, use only configured args
-- id: standalone_function
-  type: python_function
-  module_path: my_module.py
-  function_name: standalone_function
-  mode: ignore
-  args:
-    - arg1
-    - arg2
-  kwargs:
-    param1: value1
+# Example 3: Using with DataFrame and specifying input/output fields
+# sentiment.py:
+# def analyze_sentiment(text):
+#     return "positive" if "good" in text.lower() else "negative"
+nodes:
+  - id: analyze_reviews
+    type: python_function
+    module_path: sentiment.py
+    function_name: analyze_sentiment
+    mode: multiple
+    input_field: review_text
+    output_field: sentiment
+    input: reviews_dataframe  # DataFrame with 'review_text' column
 ```
 
 
