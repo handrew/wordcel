@@ -495,7 +495,7 @@ Optional:
 If `input_param` is a key in your `input_data`, then it will grab that and map it to `subdag_param` config param. Otherwise, it will just pass the entire input_data through. The latter is useful if it's just a string, not a dict.
 
 Input data:
-- None or a dictionary, simialr to how you might use `dag.execute`.
+- None or a dictionary, similar to how you might use `dag.execute`.
 
 
 ## Defining Custom Functions
