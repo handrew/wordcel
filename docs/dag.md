@@ -49,6 +49,47 @@ results = dag.execute(input_data={"node_id": data})
 
 where `node_id` is the node that `data` is intended for. 
 
+
+The full constructor for WordcelDAG accepts the following parameters:
+
+```
+yaml_file (str): 
+    Path to the YAML file containing the DAG definition.
+
+secrets_file (str, optional): 
+    Path to a YAML file containing secrets/credentials. Defaults to None.
+
+runtime_config_params (Dict[str, str], optional): 
+    Dictionary of configuration parameters that can be passed at runtime. 
+    These override any configurations defined in the YAML file. Defaults to None.
+
+custom_functions (Dict[str, Callable], optional): 
+    Dictionary mapping function names to custom Python functions that can be used 
+    in the DAG. Defaults to None.
+
+custom_nodes (Dict[str, Type[Node]], optional): 
+    Dictionary mapping node types to custom Node class implementations. 
+    Use this to extend the DAG with custom node types. Defaults to None.
+
+custom_backends (Dict[str, Type[Backend]], optional): 
+    Dictionary mapping backend names to custom Backend class implementations. 
+    Use this to add support for custom execution backends. Defaults to None.
+```
+
+You can also use `wordcel.dag.utils.initialize_dag` below which can initialize a `WordcelDAG` with custom nodes, functions, or backends using file paths.
+
+```python
+def initialize_dag(
+    pipeline_file,       # str.
+    config_params=None,  # Dict.
+    secrets_file=None,   # str.
+    custom_nodes=None,   # List of file paths, or single file path.
+    custom_functions=None,  # List of file paths, or single file path.
+    custom_backends=None,   # List of file paths, or single file path.
+):
+```
+
+
 ### Quick Start with the CLI
 
 There is a CLI! `wordcel dag --help`:
