@@ -77,9 +77,9 @@ def create_custom_backends_from_files(custom_backends_files: Union[str, List]) -
 
 
 def initialize_dag(
-    pipeline_file,
+    dag_definition,
     config_params=None,
-    secrets_file=None,
+    secrets=None,
     custom_nodes=None,
     custom_functions=None,
     custom_backends=None,
@@ -95,8 +95,8 @@ def initialize_dag(
         custom_backends = create_custom_backends_from_files(custom_backends)
 
     dag = WordcelDAG(
-        pipeline_file,
-        secrets_file=secrets_file,
+        dag_definition,
+        secrets=secrets,
         runtime_config_params=config_params,
         custom_nodes=custom_nodes,
         custom_functions=custom_functions,

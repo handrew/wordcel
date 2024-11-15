@@ -121,7 +121,7 @@ def list_node_types():
 @click.option("--secrets", default=None, help="Path to secrets file.")
 def visualize(pipeline_file, save_path, custom_nodes, secrets):
     """Visualize a pipeline."""
-    dag = initialize_dag(pipeline_file, secrets_file=secrets, custom_nodes=custom_nodes)
+    dag = initialize_dag(pipeline_file, secrets=secrets, custom_nodes=custom_nodes)
     log.info("Saving visualization to %s.", save_path)
     dag.save_image(save_path)
 
@@ -185,7 +185,7 @@ def execute(
     dag = initialize_dag(
         pipeline_file,
         config_params=dict(config_param),
-        secrets_file=secrets,
+        secrets=secrets,
         custom_nodes=custom_nodes,
         custom_functions=custom_functions,
         custom_backends=custom_backends

@@ -8,7 +8,7 @@ import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 from rich import print
-from typing import Dict, Any, Type, Callable
+from typing import Dict, Any, Type, Callable, Union
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
 from .default_functions import read_sql, llm_filter, llm_call
@@ -74,6 +74,17 @@ def _is_json_serializable(data: Any) -> bool:
 
 """DAG definition."""
 
+def _assert_dag_param_is_valid(dag_definition):
+    """Assert that the DAG definition is valid."""
+    assert isinstance(dag_definition, (str, dict)), "DAG definition must be a string or dictionary."
+    if isinstance(dag_definition, str):
+        assert os.path.exists(
+            os.path.expanduser(dag_definition)
+        ), f"DAG definition file `{dag_definition}` does not exist."
+        assert dag_definition.endswith(
+            ".yaml"
+        ), "DAG definition file must be a YAML file."
+
 
 class WordcelDAG:
     """DAG class to define and execute a directed acyclic graph."""
@@ -86,8 +97,8 @@ class WordcelDAG:
 
     def __init__(
         self,
-        yaml_file: str,
-        secrets_file: str = None,
+        dag_definition: Union[str, Dict[str, Any]] = None,
+        secrets: Union[str, Dict[str, Any]] = None,
         runtime_config_params: Dict[str, str] = None,
         custom_functions: Dict[str, Callable] = None,
         custom_nodes: Dict[str, Type[Node]] = None,
@@ -97,7 +108,7 @@ class WordcelDAG:
         Initialize the DAG from a YAML file.
         @param yaml_file: The path to the YAML file containing the DAG
         configuration.
-        @param secrets_file: The path to the YAML file containing the
+        @param secrets: The path to the YAML file containing the
         secrets.
         @param runtime_config_params: A dictionary of parameters to substitute
         in the YAML file at runtime.
@@ -106,22 +117,24 @@ class WordcelDAG:
         @param custom_backends: A dictionary of custom backends to register.
         """
         log.warning("This class is still experimental: use at your own risk.")
+        _assert_dag_param_is_valid(dag_definition)
 
-        # First load the configuration and secrets.
+        # First load the configuration.
         self.runtime_config_params = runtime_config_params
-        if self.runtime_config_params:
-            # If we are provided with config params, substitute them in the YAML file.
-            with open(yaml_file, "r") as f:
-                pipeline_content = f.read()
-            yaml_file = Template(pipeline_content).safe_substitute(
-                self.runtime_config_params
-            )
-        self.config = WordcelDAG.load_yaml(yaml_file)
+        dag_definition = self.__substitute_runtime_config_params_in_dag_definition(
+            dag_definition
+        )
+        if isinstance(dag_definition, str):
+            self.config = WordcelDAG.load_yaml(dag_definition)
+        else:
+            self.config = dag_definition
         self.name = self.config["dag"]["name"]
         self.backend_config = self.config["dag"].get("backend", {})
+
+        # Then load the secrets.
         self.secrets = {}
-        if secrets_file is not None:
-            self.secrets = WordcelDAG.load_secrets(secrets_file)
+        if secrets is not None:
+            self.secrets = WordcelDAG.load_secrets(secrets)
 
         # Register functions, nodes, backend.
         self._register_default_and_custom_functions(custom_functions)
@@ -140,6 +153,22 @@ class WordcelDAG:
         # Create the graph and nodes.
         self.graph = self.create_graph()
         self.nodes = self.create_nodes()
+
+    def __substitute_runtime_config_params_in_dag_definition(self, dag_definition):
+        """Substitute runtime config params in the DAG definition."""
+        if self.runtime_config_params and isinstance(dag_definition, str):
+            # If we are provided with config params, substitute them in the YAML file.
+            with open(dag_definition, "r") as f:
+                pipeline_content = f.read()
+            dag_definition = Template(pipeline_content).safe_substitute(
+                self.runtime_config_params
+            )
+        elif self.runtime_config_params and isinstance(dag_definition, dict):
+            log.warning(
+                "Runtime config params are provided, but the DAG definition "
+                "is not a file. Some variables may not be substituted."
+            )
+        return dag_definition
 
     @staticmethod
     def load_yaml(yaml_file: str) -> Dict[str, Any]:
@@ -164,9 +193,25 @@ class WordcelDAG:
     
 
     @staticmethod
-    def load_secrets(secrets_file: str) -> Dict[str, str]:
+    def load_secrets(secrets) -> Dict[str, str]:
         """Load a secrets file."""
-        return WordcelDAG.load_yaml(secrets_file)
+        assert isinstance(secrets, (str, dict)), "Secrets must be a string or dict."
+
+        # Check exists and is a YAML file.
+        if isinstance(secrets, str):
+            assert os.path.exists(
+                os.path.expanduser(secrets)
+            ), f"Secrets file `{secrets}` does not exist."  
+            assert secrets.endswith(    
+                ".yaml"
+            ), "Secrets file must be a YAML file."  
+
+        # If it's a dict, return it.
+        if isinstance(secrets, dict):
+            return secrets
+        
+        # Load the YAML file.
+        return WordcelDAG.load_yaml(secrets)
 
     def _register_default_and_custom_functions(
         self, custom_functions: Dict[str, Callable] = None

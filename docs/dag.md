@@ -53,11 +53,11 @@ where `node_id` is the node that `data` is intended for.
 The full constructor for WordcelDAG accepts the following parameters:
 
 ```
-yaml_file (str): 
-    Path to the YAML file containing the DAG definition.
+dag_definition (Union[str, Dict[str, Any]]): 
+    Path to the YAML file containing the DAG definition, or a dict of the DAG itself.
 
-secrets_file (str, optional): 
-    Path to a YAML file containing secrets/credentials. Defaults to None.
+secrets (Union[str, Dict[str, Any]], optional): 
+    Path to a YAML file containing secrets/credentials or a dict of the secrets. Defaults to None.
 
 runtime_config_params (Dict[str, str], optional): 
     Dictionary of configuration parameters that can be passed at runtime. 
@@ -82,7 +82,7 @@ You can also use `wordcel.dag.utils.initialize_dag` below which can initialize a
 def initialize_dag(
     pipeline_file,       # str.
     config_params=None,  # Dict.
-    secrets_file=None,   # str.
+    secrets=None,   # str.
     custom_nodes=None,   # List of file paths, or single file path.
     custom_functions=None,  # List of file paths, or single file path.
     custom_backends=None,   # List of file paths, or single file path.

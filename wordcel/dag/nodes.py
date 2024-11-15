@@ -319,7 +319,7 @@ class LLMNode(Node):
 
         # If `input_field` in the configuration, then there must also be an `output_field`.
         if "input_field" in self.config:
-            assert "output_field" in self.config, "LLMNode must have an `output_field` configuration if `field` is present."
+            assert "output_field" in self.config, "LLMNode must have an `output_field` configuration if `input_field` is present."
         return True
 
 
@@ -691,7 +691,7 @@ class DAGNode(Node):
         # sub-DAG, as they are already in the registry.
         sub_dag = WordcelDAG(
             yaml_file=os.path.expanduser(self.config["path"]),
-            secrets_file=self.config.get("secrets_path"),
+            secrets=self.config.get("secrets_path"),
             custom_functions=self.functions,
             runtime_config_params=runtime_config_params,
         )
