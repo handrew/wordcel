@@ -81,6 +81,8 @@ nodes:
   - id: node4
     type: llm
     input: [node2, node3]
+    input_field: "Country" 
+    output_field: "Summary"
     template: "Summarize this data: {input}"
 
   - id: node5
