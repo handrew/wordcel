@@ -106,8 +106,8 @@ class WordcelDAG:
     ):
         """
         Initialize the DAG from a YAML file.
-        @param yaml_file: The path to the YAML file containing the DAG
-        configuration.
+        @param dag_definition: The path to the YAML file containing the DAG
+        configuration, or a dict.
         @param secrets: The path to the YAML file containing the
         secrets.
         @param runtime_config_params: A dictionary of parameters to substitute

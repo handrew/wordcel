@@ -690,7 +690,7 @@ class DAGNode(Node):
         # We do not need to give the custom_backends or custom_nodes to the
         # sub-DAG, as they are already in the registry.
         sub_dag = WordcelDAG(
-            yaml_file=os.path.expanduser(self.config["path"]),
+            dag_definition=os.path.expanduser(self.config["path"]),
             secrets=self.config.get("secrets_path"),
             custom_functions=self.functions,
             runtime_config_params=runtime_config_params,
