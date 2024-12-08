@@ -66,9 +66,10 @@ def openai_call(
     assert (base_url is None) == (
         api_key is None
     ), "Both api_base and api_key must be set or neither should be set."
-    client = openai.OpenAI()
     if base_url is not None:
         client = openai.OpenAI(base_url=base_url, api_key=api_key)
+    else:
+        client = openai.OpenAI()
 
     messages = [{"role": "user", "content": prompt}]
     if system_prompt:
