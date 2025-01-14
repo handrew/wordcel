@@ -306,6 +306,63 @@ Input data:
   input: previous_node_id
 ```
 
+
+### `string_concat` StringConcatNode
+
+Concatenates strings with optional separator, prefix, and suffix in the form:
+```
+{prefix}{string1}{separator}{string2}{separator}...{stringN}{suffix}
+```
+where each string comes from the input data. Handles various input types including single strings, lists, DataFrames, and Series.
+
+Required:
+- None. All configuration parameters are optional.
+
+Optional:
+- separator: String to insert between concatenated strings. Default: " "
+- prefix: String to add at the beginning. Default: ""
+- suffix: String to add at the end. Default: ""
+- column: Required only when input is DataFrame - specifies which column to use
+
+Input data:
+- Single string
+- List of strings
+- DataFrame (requires 'column' config)
+- Pandas Series
+
+```yaml
+# Basic concatenation
+- id: concat_strings
+  type: string_concat
+  separator: " "
+  input: previous_node_id
+
+# With all options
+- id: fancy_concat
+  type: string_concat
+  separator: ", "
+  prefix: "Items: ["
+  suffix: "]"
+  column: "text"  # only needed for DataFrame input
+  input: previous_node_id
+
+# Examples of results:
+# Input: ["apple", "banana", "orange"]
+# Basic: "apple banana orange"
+# Fancy: "Items: [apple, banana, orange]"
+
+# Input: DataFrame with column 'text': ["apple", "banana", "orange"]
+# Basic: "apple banana orange"
+# Fancy: "Items: [apple, banana, orange]"
+```
+
+The node automatically handles:
+- Converting non-string elements to strings
+- Filtering out None values
+- Various input types flexibly
+- Proper string formatting with consistent separator/prefix/suffix application
+
+
 ### `llm` LLMNode
 
 Returns a string, list, or DataFrame, depending on what is given. In general, the philosophy is to return a mutated version of what is given to the LLM Node. So, if the node is given a dict or DataFrame, then it simply updates the dict / DataFrame with its answer (according to `output_field`). The exception is for a single dict - it will simply return a string.

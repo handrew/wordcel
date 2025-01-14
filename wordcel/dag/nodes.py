@@ -206,6 +206,50 @@ class StringTemplateNode(Node):
         return True
 
 
+class StringConcatNode(Node):
+    description = """Node to concatenate strings from multiple inputs with optional separator and prefix/suffix."""
+
+    def execute(self, input_data: Union[str, List[str], pd.DataFrame, pd.Series]) -> str:
+        # Get configuration parameters with defaults
+        separator = self.config.get("separator", " ")
+        prefix = self.config.get("prefix", "")
+        suffix = self.config.get("suffix", "")
+        
+        # Handle different input types
+        if isinstance(input_data, str):
+            strings = [input_data]
+        elif isinstance(input_data, list):
+            if all(isinstance(x, str) for x in input_data):
+                strings = input_data
+            else:
+                raise ValueError("All elements in input list must be strings")
+        elif isinstance(input_data, pd.DataFrame):
+            assert "column" in self.config, "Must specify 'column' in config when input is a DataFrame"
+            strings = input_data[self.config["column"]].tolist()
+        elif isinstance(input_data, pd.Series):
+            strings = input_data.tolist()
+        else:
+            raise ValueError(f"Unsupported input type: {type(input_data)}")
+
+        # Filter out None values and convert all elements to strings
+        strings = [str(s) for s in strings if s is not None]
+        
+        # Perform the concatenation
+        result = prefix + separator.join(strings) + suffix
+        
+        return result
+
+    def validate_config(self) -> bool:
+        # All config parameters are optional
+        if "separator" in self.config:
+            assert isinstance(self.config["separator"], str), "separator must be a string"
+        if "prefix" in self.config:
+            assert isinstance(self.config["prefix"], str), "prefix must be a string"
+        if "suffix" in self.config:
+            assert isinstance(self.config["suffix"], str), "suffix must be a string"
+        return True
+
+
 class LLMNode(Node):
     description = """Node to query an LLM API with a template. Template must
     contain "{input}" in order to substitute something in. If given a string,
@@ -725,6 +769,7 @@ NODE_TYPES: Dict[str, Type[Node]] = {
     "file_directory": FileDirectoryNode,
     "sql": SQLNode,
     "string_template": StringTemplateNode,
+    "string_concat": StringConcatNode,
     "llm": LLMNode,
     "llm_filter": LLMFilterNode,
     "file_writer": FileWriterNode,
