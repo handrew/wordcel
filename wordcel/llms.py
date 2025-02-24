@@ -7,7 +7,7 @@ import google.generativeai as genai
 SUPPORTED_MODELS = {
     "gpt-4o-mini": "gpt-4o-mini",
     "gpt-4o": "gpt-4o",
-    "haiku": "claude-3-haiku-20240307",
+    "haiku": "claude-3-5-haiku-20241022",
     "sonnet": "claude-3-5-sonnet-latest",
     "gemini-1.5-flash": "gemini-1.5-flash",
     "gemini-1.5-flash-8b": "gemini-1.5-flash-8b",
@@ -22,7 +22,7 @@ def llm_call(prompt, model="gemini-1.5-flash", **kwargs):
     assert model in SUPPORTED_MODELS, error_msg
     if model in ["gpt-4o-mini", "gpt-4o"]:
         return openai_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
-    elif model == "gemini-1.5-flash" or model == "gemini-1.5-pro":
+    elif "gemini" in model:
         return gemini_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
     elif model in ["haiku", "sonnet"]:
         return anthropic_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
