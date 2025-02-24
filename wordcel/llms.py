@@ -9,12 +9,14 @@ SUPPORTED_MODELS = {
     "gpt-4o": "gpt-4o",
     "haiku": "claude-3-haiku-20240307",
     "sonnet": "claude-3-5-sonnet-latest",
-    "gemini-1.5-flash": "gemini-1.5-flash-002",
-    "gemini-1.5-pro": "gemini-1.5-pro-002",
+    "gemini-1.5-flash": "gemini-1.5-flash",
+    "gemini-1.5-flash-8b": "gemini-1.5-flash-8b",
+    "gemini-2.0-flash": "gemini-2.0-flash",
+    "gemini-1.5-pro": "gemini-1.5-pro",
 }
 
 
-def llm_call(prompt, model="haiku", **kwargs):
+def llm_call(prompt, model="gemini-1.5-flash", **kwargs):
     """Router for openai_call, gemini_call, and anthropic_call."""
     error_msg = f"Model {model} not supported. Supported models: {SUPPORTED_MODELS.keys()}"
     assert model in SUPPORTED_MODELS, error_msg
