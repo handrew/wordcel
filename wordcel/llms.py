@@ -12,11 +12,12 @@ SUPPORTED_MODELS = {
     "gemini-1.5-flash": "gemini-1.5-flash",
     "gemini-1.5-flash-8b": "gemini-1.5-flash-8b",
     "gemini-2.0-flash": "gemini-2.0-flash",
+    "gemini-2.0-flash-lite": "gemini-2.0-flash-lite",
     "gemini-1.5-pro": "gemini-1.5-pro",
 }
 
 
-def llm_call(prompt, model="gemini-1.5-flash", **kwargs):
+def llm_call(prompt, model="gemini-2.0-flash", **kwargs):
     """Router for openai_call, gemini_call, and anthropic_call."""
     error_msg = f"Model {model} not supported. Supported models: {SUPPORTED_MODELS.keys()}"
     assert model in SUPPORTED_MODELS, error_msg
