@@ -660,7 +660,7 @@ class PythonFunctionNode(Node):
                 # If input was a DataFrame, return results in the same format
                 if isinstance(input_data, pd.DataFrame):
                     input_data = input_data.copy()
-                    output_column = self.config.get("output_column", "result")
+                    output_column = self.config.get("output_field", "result")
                     input_data[output_column] = results
                     return input_data
                 
