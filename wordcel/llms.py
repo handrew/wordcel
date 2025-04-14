@@ -4,29 +4,21 @@ import openai
 import google.generativeai as genai
 
 
-SUPPORTED_MODELS = {
-    "gpt-4o-mini": "gpt-4o-mini",
-    "gpt-4o": "gpt-4o",
-    "haiku": "claude-3-5-haiku-20241022",
-    "sonnet": "claude-3-5-sonnet-latest",
-    "gemini-1.5-flash": "gemini-1.5-flash",
-    "gemini-1.5-flash-8b": "gemini-1.5-flash-8b",
-    "gemini-2.0-flash": "gemini-2.0-flash",
-    "gemini-2.0-flash-lite": "gemini-2.0-flash-lite",
-    "gemini-1.5-pro": "gemini-1.5-pro",
-}
+SUPPORTED_PROVIDERS = ["openai", "anthropic", "gemini"]
 
 
-def llm_call(prompt, model="gemini-2.0-flash", **kwargs):
+def llm_call(prompt, provider="gemini", model=None, **kwargs):
     """Router for openai_call, gemini_call, and anthropic_call."""
-    error_msg = f"Model {model} not supported. Supported models: {SUPPORTED_MODELS.keys()}"
-    assert model in SUPPORTED_MODELS, error_msg
-    if model in ["gpt-4o-mini", "gpt-4o"]:
-        return openai_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
-    elif "gemini" in model:
-        return gemini_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
-    elif model in ["haiku", "sonnet"]:
-        return anthropic_call(prompt, model=SUPPORTED_MODELS[model], **kwargs)
+    assert model is not None, "Model name must be specified."
+    error_msg = f"Provider {provider} not supported. Supported providers: {SUPPORTED_PROVIDERS}"
+    assert provider in SUPPORTED_PROVIDERS, error_msg
+    
+    if provider == "openai":
+        return openai_call(prompt, model=model, **kwargs)
+    elif provider == "gemini":
+        return gemini_call(prompt, model=model, **kwargs)
+    elif provider == "anthropic":
+        return anthropic_call(prompt, model=model, **kwargs)
     else:
         raise ValueError(error_msg)
     
@@ -34,11 +26,12 @@ def llm_call(prompt, model="gemini-2.0-flash", **kwargs):
 def anthropic_call(
     prompt,
     system_prompt="You are a helpful assistant.",
-    model=SUPPORTED_MODELS["haiku"],
+    model=None,
     temperature=0,
     max_tokens=1024,
 ):
     """Wrapper over Anthropic's completion API."""
+    assert model is not None, "Model name must be specified."
     client = anthropic.Anthropic()
     message = client.messages.create(
         model=model,
@@ -57,7 +50,7 @@ def anthropic_call(
 def openai_call(
     prompt,
     system_prompt=None,
-    model="gpt-4o-mini",
+    model=None,
     temperature=0,
     max_tokens=1024,
     stop=None,
@@ -65,6 +58,7 @@ def openai_call(
     api_key=None,
 ):
     """Wrapper over OpenAI's completion API."""
+    assert model is not None, "Model name must be specified."
     # Assert both base_url and api_key are set or neither is set.
     assert (base_url is None) == (
         api_key is None
@@ -96,11 +90,12 @@ def openai_call(
 def gemini_call(
     prompt,
     system_prompt=None,
-    model=SUPPORTED_MODELS["gemini-1.5-flash"],
+    model=None, 
     temperature=0,
     max_tokens=8192,
 ):
     """Wrapper over Google Gemini's text generation API."""
+    assert model is not None, "Model name must be specified."
     if "GEMINI_API_KEY" not in os.environ:
         raise ValueError("GEMINI_API_KEY environment variable not set.")
 
