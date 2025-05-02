@@ -21,6 +21,7 @@ set_tracing_disabled(disabled=True)
 def llm_call(prompt, model=None, **kwargs):
     """Router for openai_call, gemini_call, and anthropic_call."""
     assert model is not None, "Model name must be specified."
+    assert "/" in model, "Model name must be in the form `<provider>/<model>`."
     provider, model = model.split("/")
     error_msg = f"Provider `{provider}` not supported. Supported providers: {SUPPORTED_PROVIDERS}. "
     error_msg += "Give your model in the form `<provider>/<model>`, like `openai/gpt-4o`."
