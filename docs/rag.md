@@ -89,14 +89,14 @@ This file contains the `ContextualRetrieval` class, which implements a minimal v
 
 ```python
 class ContextualRetrieval:
-    def __init__(self, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=anthropic_call)
+    def __init__(self, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=llm_call)
 ```
 
 **Parameters:**
 - `docs` (List[str]): List of documents to index.
 - `chunk_size` (int, optional): Size of each chunk. Default: 1024
 - `chunk_overlap` (int, optional): Overlap between chunks. Default: 10
-- `llm_fn` (function, optional): Language model function to use. Default: `anthropic_call`
+- `llm_fn` (function, optional): Language model function to use. Default: `llm_call`
 
 ### Methods
 
@@ -104,7 +104,7 @@ class ContextualRetrieval:
 
 ```python
 @classmethod
-def from_documents(cls, docs: List[str], llm_fn=anthropic_call) -> ContextualRetrieval
+def from_documents(cls, docs: List[str], llm_fn=llm_call) -> ContextualRetrieval
 ```
 
 Creates a ContextualRetrieval instance from a list of documents.
@@ -162,7 +162,7 @@ Retrieves the top-k chunks for a given query.
 #### generate
 
 ```python
-def generate(self, search_query: str, generation_query: str = None, top_k: int = 5, semantic_weight=0.5, tfidf_weight=0.5, llm_fn=anthropic_call) -> str
+def generate(self, search_query: str, generation_query: str = None, top_k: int = 5, semantic_weight=0.5, tfidf_weight=0.5, llm_fn=llm_call) -> str
 ```
 
 Retrieves top-k chunks using `search_query` and generates a response using `generation_query`.
@@ -173,7 +173,7 @@ Retrieves top-k chunks using `search_query` and generates a response using `gene
 - `top_k` (int, optional): Number of top results to use. Default: 5
 - `semantic_weight` (float, optional): Weight for semantic similarity. Default: 0.5
 - `tfidf_weight` (float, optional): Weight for TF-IDF similarity. Default: 0.5
-- `llm_fn` (function, optional): Language model function to use. Default: `anthropic_call`
+- `llm_fn` (function, optional): Language model function to use. Default: `llm_call`
 
 **Returns:**
 - str: The generated response.

@@ -19,7 +19,7 @@ set_tracing_disabled(disabled=True)
 
 
 def llm_call(prompt, model=None, **kwargs):
-    """Router for openai_call, gemini_call, and anthropic_call."""
+    """Wrapper for OAI, Anthropic, and Google calls."""
     assert model is not None, "Model name must be specified."
     assert "/" in model, "Model name must be in the form `<provider>/<model>`."
     provider, model = model.split("/")
