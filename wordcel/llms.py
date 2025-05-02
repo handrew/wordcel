@@ -1,6 +1,6 @@
 """LLM API wrappers for OpenAI, Anthropic, and Gemini."""
-
 import os
+import asyncio
 import openai
 from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
@@ -90,6 +90,12 @@ def openai_call(
     if system_prompt:
         messages.insert(0, {"role": "system", "content": system_prompt})
 
+    try:  # Try to get the current event loop
+        loop = asyncio.get_event_loop()
+    except RuntimeError:  # Create a new event loop if there isn't one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
     result = Runner.run_sync(
         agent,
         input=messages,
