@@ -1,110 +1,54 @@
-"""LLM API wrappers for OpenAI, Anthropic, and Gemini."""
+"""LLM API wrapper for LiteLLM."""
 import os
-import asyncio
 import openai
-from openai import AsyncOpenAI
-from openai.types.shared import Reasoning
-from agents import Agent, ModelSettings, Runner, RunConfig
-from agents import ModelProvider, Model, OpenAIChatCompletionsModel
-from agents import (
-    set_default_openai_api,
-    set_tracing_disabled,
-)
+import litellm
 
-SUPPORTED_PROVIDERS = ["openai", "anthropic", "google"]
-GEMINI_BASE_API = "https://generativelanguage.googleapis.com/v1beta/openai/"
-ANTHROPIC_BASE_API = "https://api.anthropic.com/v1/"
-set_default_openai_api("chat_completions")
-set_tracing_disabled(disabled=True)
+SUPPORTED_PROVIDERS = ["openai", "anthropic", "gemini"]
 
 
 def llm_call(prompt, model=None, **kwargs):
-    """Wrapper for OAI, Anthropic, and Google calls."""
+    """Wrapper for OAI, Anthropic, and Google calls using litellm."""
+    
     assert model is not None, "Model name must be specified."
     assert "/" in model, "Model name must be in the form `<provider>/<model>`."
-    provider, model = model.split("/")
+    provider, model_name = model.split("/")
     error_msg = f"Provider `{provider}` not supported. Supported providers: {SUPPORTED_PROVIDERS}. "
     error_msg += "Give your model in the form `<provider>/<model>`, like `openai/gpt-4o`."
     assert provider in SUPPORTED_PROVIDERS, error_msg
-
-    if provider == "openai":
-        return openai_call(prompt, model=model, **kwargs)
-    elif provider == "google":
-        return openai_call(prompt, model=model, base_url=GEMINI_BASE_API, api_key=os.getenv("GEMINI_API_KEY"), **kwargs)
-    elif provider == "anthropic":
-        return openai_call(prompt, model=model, base_url=ANTHROPIC_BASE_API, api_key=os.getenv("ANTHROPIC_API_KEY"), **kwargs)
-    else:
-        raise ValueError(error_msg)
-
-
-def openai_call(
-    prompt,
-    system_prompt=None,
-    model=None,
-    max_tokens=None,
-    temperature=1,
-    reasoning_effort=None,
-    base_url=None,
-    api_key=None,
-    **kwargs,
-):
-    """Wrapper over OpenAI's completion API."""
-    assert reasoning_effort is None or reasoning_effort in [
-        "low",
-        "medium",
-        "high",
-        "none",
-    ]
-
-    assert model is not None, "Model name must be specified."
-    # Assert both base_url and api_key are set or neither is set.
-    assert (base_url is None) == (
-        api_key is None
-    ), "Both api_base and api_key must be set or neither should be set."
-    # Assert that the client isn't given if the base_url and api_key are set.
-    if base_url is not None:
-        client = AsyncOpenAI(
-            base_url=base_url,
-            api_key=api_key,
-        )
-        class CustomModelProvider(ModelProvider):
-            def get_model(self, model_name: str | None) -> Model:
-                return OpenAIChatCompletionsModel(model=model, openai_client=client)
-    else:
-        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-    agent = Agent(
-        name="Agent",
-        instructions=system_prompt,
-        model=model,
-        model_settings=ModelSettings(
-            reasoning=Reasoning(effort=reasoning_effort) if reasoning_effort else None,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=kwargs.get("top_p", 1),
-            presence_penalty=kwargs.get("presence_penalty", 0),
-        ),
-    )
-
-    messages = [{"role": "user", "content": prompt}]
-    if system_prompt:
-        messages.insert(0, {"role": "system", "content": system_prompt})
-
-    try:  # Try to get the current event loop
-        loop = asyncio.get_event_loop()
-    except RuntimeError:  # Create a new event loop if there isn't one
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
     
-    result = Runner.run_sync(
-        agent,
-        input=messages,
-        run_config=RunConfig(model_provider=CustomModelProvider()) if base_url else None,
-    )
-
-    text = result.final_output
-
-    return text
+    # Create messages list
+    messages = [{"role": "user", "content": prompt}]
+    if "system_prompt" in kwargs and kwargs["system_prompt"]:
+        messages.insert(0, {"role": "system", "content": kwargs.pop("system_prompt")})
+    
+    # Set API keys if not already in environment
+    if provider == "anthropic" and not os.getenv("ANTHROPIC_API_KEY"):
+        os.environ["ANTHROPIC_API_KEY"] = os.getenv("ANTHROPIC_API_KEY", "")
+    elif provider == "google" and not os.getenv("GOOGLE_API_KEY"):
+        os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_API_KEY", "")
+    
+    # Prepare litellm parameters
+    litellm_model = f"{provider}/{model_name}"
+    litellm_params = {
+        "model": litellm_model,
+        "messages": messages,
+    }
+    
+    # Map common parameters
+    if "temperature" in kwargs:
+        litellm_params["temperature"] = kwargs.pop("temperature")
+    if "max_tokens" in kwargs:
+        litellm_params["max_tokens"] = kwargs.pop("max_tokens")
+    if "reasoning_effort" in kwargs and kwargs["reasoning_effort"] is not None:
+        litellm_params["reasoning_effort"] = kwargs.pop("reasoning_effort")
+    
+    # Add any remaining kwargs
+    litellm_params.update(kwargs)
+    
+    # Make the API call
+    response = litellm.completion(**litellm_params)
+    
+    return response.choices[0].message.content
 
 
 def openai_embed(text, model="text-embedding-3-small"):
