@@ -89,9 +89,18 @@ def test_load_and_retrieve():
     assert len(generated) > 0
 
 
-@pytest.fixture(scope="session", autouse=True)
-def cleanup():
+@pytest.fixture(autouse=True)
+def cleanup_test_files():
+    """Clean up test files before and after each test."""
+    # Clean up before test
+    test_files = ["retriever.pkl"]
+    for file_path in test_files:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    
     yield
-    # Clean up test files
-    if os.path.exists("retriever.pkl"):
-        os.remove("retriever.pkl")
+    
+    # Clean up after test
+    for file_path in test_files:
+        if os.path.exists(file_path):
+            os.remove(file_path)

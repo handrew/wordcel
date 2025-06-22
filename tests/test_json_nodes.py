@@ -1,11 +1,19 @@
-import unittest
 import os
 import json
 import pandas as pd
+import pytest
 from wordcel.dag import WordcelDAG
 
-class TestJSONNodes(unittest.TestCase):
-    def setUp(self):
+class TestJSONNodes:
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self):
+        # Clean up any existing files first
+        test_files = ['test_data.json', 'test_list_data.json', 'test_config.yaml']
+        
+        for file_path in test_files:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
         # Create temporary JSON files for testing
         self.json_data = {
             "name": "John Doe",
@@ -42,26 +50,22 @@ nodes:
         with open('test_config.yaml', 'w') as f:
             f.write(self.yaml_config)
 
-
-    def tearDown(self):
+        yield
+        
         # Clean up temporary files
-        os.remove('test_data.json')
-        os.remove('test_list_data.json')
-        os.remove('test_config.yaml')
+        for file_path in test_files:
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
     def test_json_and_json_dataframe_nodes(self):
         dag = WordcelDAG('test_config.yaml')
         results = dag.execute()
 
         # Test JSON node
-        self.assertIsInstance(results['read_json'], dict)
-        self.assertEqual(results['read_json'], self.json_data)
+        assert isinstance(results['read_json'], dict)
+        assert results['read_json'] == self.json_data
 
         # Test JSON DataFrame node
-        self.assertIsInstance(results['read_json_df'], pd.DataFrame)
-        self.assertEqual(len(results['read_json_df']), 2)
-        self.assertListEqual(list(results['read_json_df'].columns), ['name', 'age', 'city'])
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert isinstance(results['read_json_df'], pd.DataFrame)
+        assert len(results['read_json_df']) == 2
+        assert list(results['read_json_df'].columns) == ['name', 'age', 'city']

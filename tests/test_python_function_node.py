@@ -9,6 +9,11 @@ class TestPythonFunctionNode:
     def setup_and_teardown(self):
         # Create a temporary test function file
         self.test_functions_path = "test_functions.py"
+        
+        # Clean up before test in case of previous failures
+        if os.path.exists(self.test_functions_path):
+            os.remove(self.test_functions_path)
+            
         with open(self.test_functions_path, "w") as f:
             f.write("""
 def add_numbers(a, b=1):
