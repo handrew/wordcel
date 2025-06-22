@@ -17,7 +17,6 @@ import pickle
 import logging
 import pandas as pd
 from typing import List, Dict
-import anthropic
 from .utils import (
     chunk_text,
     embed_chunks,

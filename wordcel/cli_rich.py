@@ -140,7 +140,7 @@ class RichCommand(click.Command):
     
     def _show_usage(self, ctx):
         """Show command usage."""
-        usage_parts = [f"[green]wordcel {ctx.command_path}[/green]"]
+        usage_parts = [f"[green]{ctx.command_path}[/green]"]
         
         # Add arguments and options
         for param in self.params:

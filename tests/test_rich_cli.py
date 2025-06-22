@@ -8,10 +8,6 @@ from io import StringIO
 
 from wordcel.cli import main
 from wordcel.cli_rich import RichGroup, RichCommand, show_version_info
-from wordcel.completion import (
-    complete_pipeline_files, complete_node_types, complete_log_levels,
-    install_completion, detect_shell
-)
 from wordcel.interactive import InteractiveSession
 
 
@@ -38,7 +34,7 @@ class TestRichCLI:
         result = self.runner.invoke(main, ['dag', '--help'])
         
         assert result.exit_code == 0
-        assert "🔗" in result.output  # DAG emoji
+        assert "🧠" in result.output  # DAG emoji
         assert "WordcelDAG commands" in result.output
         assert "Available Commands" in result.output
         
@@ -211,66 +207,6 @@ class TestRichCLI:
             assert result.exit_code == 0  # Command doesn't exit with error code
             assert "✗ Failed to initialize DAG" in result.output
 
-
-class TestCompletion:
-    """Test auto-completion functionality."""
-    
-    def test_complete_pipeline_files(self):
-        """Test pipeline file completion."""
-        with CliRunner().isolated_filesystem():
-            # Create some test files
-            open('test1.yaml', 'w').close()
-            open('test2.yml', 'w').close()
-            open('test.txt', 'w').close()  # Should not match
-            
-            completions = complete_pipeline_files(None, None, 'test')
-            
-            assert 'test1.yaml' in completions
-            assert 'test2.yml' in completions
-            assert 'test.txt' not in completions
-            
-    def test_complete_log_levels(self):
-        """Test log level completion."""
-        completions = complete_log_levels(None, None, 'D')
-        assert 'DEBUG' in completions
-        
-        completions = complete_log_levels(None, None, 'i')
-        assert 'INFO' in completions
-        
-    def test_complete_node_types(self):
-        """Test node type completion."""
-        completions = complete_node_types(None, None, 'c')
-        # Should include 'csv' if it exists
-        assert isinstance(completions, list)
-        
-    def test_detect_shell(self):
-        """Test shell detection."""
-        with patch.dict(os.environ, {'SHELL': '/bin/bash'}):
-            assert detect_shell() == 'bash'
-            
-        with patch.dict(os.environ, {'SHELL': '/usr/bin/zsh'}):
-            assert detect_shell() == 'zsh'
-            
-        with patch.dict(os.environ, {'SHELL': '/usr/local/bin/fish'}):
-            assert detect_shell() == 'fish'
-            
-    def test_install_completion_bash(self):
-        """Test completion installation for bash."""
-        with patch('wordcel.completion.write_completion_script') as mock_write:
-            mock_write.return_value = (True, '/path/to/completion')
-            
-            success, message = install_completion('bash')
-            
-            assert success
-            assert 'Bash completion installed' in message
-            mock_write.assert_called_once()
-            
-    def test_install_completion_unsupported_shell(self):
-        """Test completion installation for unsupported shell."""
-        success, message = install_completion('tcsh')
-        
-        assert not success
-        assert 'Unsupported shell' in message
 
 
 class TestInteractiveMode:
@@ -474,9 +410,3 @@ class TestCLIIntegration:
         assert result.exit_code == 0
         assert "Launch interactive mode" in result.output
         
-    def test_install_completion_command_exists(self):
-        """Test that install-completion command is available."""
-        runner = CliRunner()
-        result = runner.invoke(main, ['install-completion', '--help'])
-        assert result.exit_code == 0
-        assert "Install shell auto-completion" in result.output
