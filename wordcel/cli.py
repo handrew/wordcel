@@ -7,10 +7,6 @@ from rich.console import Console
 from wordcel.dag.utils import initialize_dag
 from wordcel.logging_config import get_logger
 from wordcel.cli_rich import RichGroup, RichCommand, show_version_info
-from wordcel.completion import (
-    complete_pipeline_files, complete_python_files, complete_log_levels,
-    complete_output_formats, complete_templates, install_completion
-)
 from wordcel.interactive import start_interactive_mode
 
 log = get_logger("cli")
@@ -131,8 +127,8 @@ def dag():
 
 
 @dag.command(cls=RichCommand)
-@click.argument("pipeline_file", shell_complete=complete_pipeline_files)
-@click.option("--template", shell_complete=complete_templates,
+@click.argument("pipeline_file")
+@click.option("--template",
               help="Pipeline template to use (basic, advanced, rag, analysis)")
 @click.option("--force", "-f", is_flag=True, help="Overwrite existing file")
 def new(pipeline_file, template, force):
@@ -286,7 +282,7 @@ def execute(
 
 
 @dag.command(cls=RichCommand)
-@click.argument("pipeline_file", shell_complete=complete_pipeline_files)
+@click.argument("pipeline_file")
 @click.option("--secrets", default=None, help="Path to secrets file.")
 @click.option(
     "--custom-nodes",
@@ -413,29 +409,6 @@ def interactive():
     start_interactive_mode()
 
 
-@main.command(cls=RichCommand)
-@click.option("--shell", type=click.Choice(['bash', 'zsh', 'fish']),
-              help="Shell type (auto-detected if not specified)")
-def install_completion(shell):
-    """🔧 Install shell auto-completion for wordcel
-    
-    Sets up tab completion for wordcel commands, options, and file paths.
-    Supports bash, zsh, and fish shells.
-    """
-    from wordcel.completion import install_completion as install_comp
-    success, message = install_comp(shell)
-    if success:
-        console.print(message)
-        console.print("\n[bold yellow]Next steps:[/bold yellow]")
-        if shell == 'bash':
-            console.print("Add to your ~/.bashrc: [cyan]source ~/.bash_completion.d/wordcel[/cyan]")
-        elif shell == 'zsh':
-            console.print("Restart your shell or run: [cyan]source ~/.zshrc[/cyan]")
-        elif shell == 'fish':
-            console.print("Restart your shell to enable completion")
-    else:
-        console.print(f"[red]✗[/red] {message}")
-        raise click.ClickException(message)
 
 
 def get_template_content(template: str) -> str:
