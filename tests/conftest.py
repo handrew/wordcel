@@ -32,7 +32,9 @@ def cleanup_test_files():
         
         # Backend test files
         "dag.yaml",
-        "test.csv"
+        "test.csv",
+        "test_backend.csv",
+        "test_backend_dag.yaml"
     ]
     
     # Also clean up any files matching test patterns
@@ -61,7 +63,7 @@ def cleanup_test_files():
                 print(f"Warning: Could not remove {file_path}: {e}")
     
     # Clean up any cache directories and __pycache__ directories
-    directories_to_remove = ["__pycache__", "cache"]
+    directories_to_remove = ["__pycache__", "cache", "test_backend_cache"]
     
     for dir_name in directories_to_remove:
         if os.path.exists(dir_name):
