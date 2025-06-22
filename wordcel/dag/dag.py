@@ -18,6 +18,8 @@ from .executors import ExecutorRegistry
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 console = Console()
 
@@ -385,7 +387,12 @@ class WordcelDAG:
             node = self.nodes[node_id]
             node_type = node.__class__.__name__
             
-            console.print(f"[bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
+            # Add model info if available
+            model_info = ""
+            if hasattr(node, 'config') and 'model' in node.config:
+                model_info = f" | Model: {node.config['model']}"
+            
+            console.print(f"[bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim]", end=" ")
             
             try:
                 node.validate_config()

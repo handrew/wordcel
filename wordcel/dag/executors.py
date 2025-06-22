@@ -76,8 +76,13 @@ class SequentialDAGExecutor(DAGExecutor):
             node_type = node.__class__.__name__
             start_time = time.time()
             
-            # Rich formatted progress
-            self.console.print(f"[bold cyan]\\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
+            # Rich formatted progress with model info
+            model_info = ""
+            if hasattr(node, 'config') and node.__class__.__name__ in ['LLMNode', 'LLMFilterNode']:
+                from ..config import DEFAULT_MODEL
+                model = node.config.get('model', DEFAULT_MODEL)
+                model_info = f" | Model: {model}"
+            self.console.print(f"[bold cyan]\\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim] ", end="")
 
             try:
                 # Get the incoming edges and their inputs.
@@ -85,10 +90,10 @@ class SequentialDAGExecutor(DAGExecutor):
                 
                 # Check the cache, if we have a backend.
                 if dag.backend and dag.backend.exists(node_id, incoming_input):
-                    self.console.print("[yellow]📦 cache[/yellow]", end=" ")
+                    self.console.print("→ [yellow]📦 cached[/yellow] ", end="")
                     results[node_id] = dag.backend.load(node_id, incoming_input)
                 else:
-                    self.console.print("[blue]⚡ exec[/blue]", end=" ")
+                    self.console.print("→ [blue]🔄 running[/blue] ", end="")
                     results[node_id] = node.execute(incoming_input)
 
                     # If the node is not a DAG node, check if the result is JSON serializable.
@@ -110,7 +115,7 @@ class SequentialDAGExecutor(DAGExecutor):
 
             except Exception as e:
                 elapsed = time.time() - start_time
-                self.console.print(f"[bold red]✗[/bold red] [red]{elapsed:.2f}s[/red]")
+                self.console.print(f"[bold red]❌ failed[/bold red] [red]{elapsed:.2f}s[/red]")
                 
                 error_context = {
                     'node_id': node_id,
@@ -231,7 +236,12 @@ class ParallelDAGExecutor(DAGExecutor):
                         )
                         future_to_node[future] = node_id
                         
-                        self.console.print(f"[bold cyan]🟦[/bold cyan] [bold]{node_id}[/bold] [dim]({node.__class__.__name__})[/dim] started")
+                        model_info = ""
+                        if hasattr(node, 'config') and node.__class__.__name__ in ['LLMNode', 'LLMFilterNode']:
+                            from ..config import DEFAULT_MODEL
+                            model = node.config.get('model', DEFAULT_MODEL)
+                            model_info = f" | Model: {model}"
+                        self.console.print(f"[bold cyan]▶️[/bold cyan] [bold]{node_id}[/bold] [dim]({node.__class__.__name__}{model_info})[/dim] [blue]starting...[/blue]")
                 
                 # Wait for at least one node to complete
                 if future_to_node:
@@ -254,8 +264,8 @@ class ParallelDAGExecutor(DAGExecutor):
                             results[node_id] = execution_result['result']
                         
                         # Print success
-                        cache_indicator = "[yellow]📦 cache[/yellow]" if execution_result['cache_hit'] else "[blue]⚡ exec[/blue]"
-                        self.console.print(f"[bold green]✓[/bold green] [bold]{node_id}[/bold] {cache_indicator} [green]{execution_result['elapsed']:.2f}s[/green]")
+                        cache_indicator = "[yellow]📦 cached[/yellow]" if execution_result['cache_hit'] else "[blue]🔄 completed[/blue]"
+                        self.console.print(f"[bold green]✅[/bold green] [bold]{node_id}[/bold] {cache_indicator} [green]{execution_result['elapsed']:.2f}s[/green]")
                         
                         if self.verbose:
                             self.console.print(f"[dim]Result for {node_id}:[/dim]")
@@ -271,7 +281,7 @@ class ParallelDAGExecutor(DAGExecutor):
                     else:
                         # Handle error
                         error = execution_result['error']
-                        self.console.print(f"[bold red]✗[/bold red] [bold]{node_id}[/bold] [red]{execution_result['elapsed']:.2f}s[/red]")
+                        self.console.print(f"[bold red]❌[/bold red] [bold]{node_id}[/bold] [red]failed after {execution_result['elapsed']:.2f}s[/red]")
                         
                         error_context = {
                             'node_id': node_id,
