@@ -43,7 +43,7 @@ def create_custom_functions_from_files(custom_functions_files: Union[str, List])
 
     custom_functions = {}
     for custom_functions_file in custom_functions_files:
-        functions_module = load_module(custom_functions, "custom_functions")
+        functions_module = load_module(custom_functions_file, "custom_functions")
         found_functions = {name: func for name, func in functions_module.__dict__.items() if callable(func)}
         # Check for duplicates.
         duplicates = set(custom_functions.keys()) & set(found_functions.keys())
@@ -63,7 +63,7 @@ def create_custom_backends_from_files(custom_backends_files: Union[str, List]) -
 
     custom_backends = {}
     for custom_backends_file in custom_backends_files:
-        backends_module = load_module(custom_backends, "custom_backends")
+        backends_module = load_module(custom_backends_file, "custom_backends")
         found_backends = {name: cls for name, cls in backends_module.__dict__.items() if isinstance(cls, type) and issubclass(cls, Backend) and cls is not Backend}
         # Check for duplicates.
         duplicates = set(custom_backends.keys()) & set(found_backends.keys())
