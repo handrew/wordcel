@@ -393,6 +393,10 @@ class WordcelDAG:
             })
         return info
 
+    def get_execution_order(self):
+        """Get the execution order of nodes in the DAG."""
+        return list(nx.topological_sort(self.graph))
+
     def dry_run(self):
         """Validate DAG configuration without executing nodes."""
         start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

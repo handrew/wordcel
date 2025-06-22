@@ -214,6 +214,50 @@ nodes:
         assert 'operation' in info[1]['config_keys']
         assert info[1]['inputs'] == ['load_data']
 
+    def test_get_execution_order(self):
+        """Test the get_execution_order() method returns correct topological order."""
+        dag_config = """
+dag:
+  name: test_execution_order
+
+nodes:
+  - id: node_a
+    type: csv
+    path: "https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv"
+
+  - id: node_b
+    type: dataframe_operation
+    input: node_a
+    operation: head
+    args: [5]
+
+  - id: node_c
+    type: dataframe_operation
+    input: node_b
+    operation: tail
+    args: [3]
+
+  - id: node_d
+    type: dataframe_operation
+    input: node_a
+    operation: describe
+        """
+        self.create_test_yaml(dag_config)
+        
+        dag = WordcelDAG(self.test_yaml_path)
+        execution_order = dag.get_execution_order()
+        
+        # Check that we get all nodes
+        assert len(execution_order) == 4
+        assert set(execution_order) == {'node_a', 'node_b', 'node_c', 'node_d'}
+        
+        # Check topological ordering constraints
+        # node_a must come before node_b and node_d
+        assert execution_order.index('node_a') < execution_order.index('node_b')
+        assert execution_order.index('node_a') < execution_order.index('node_d')
+        # node_b must come before node_c
+        assert execution_order.index('node_b') < execution_order.index('node_c')
+
     def test_dry_run_success(self):
         """Test dry_run() with valid configuration."""
         dag_config = """
