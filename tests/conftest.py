@@ -60,11 +60,14 @@ def cleanup_test_files():
             except OSError as e:
                 print(f"Warning: Could not remove {file_path}: {e}")
     
-    # Clean up any __pycache__ directories in the root
-    if os.path.exists("__pycache__"):
-        import shutil
-        try:
-            shutil.rmtree("__pycache__")
-            print("Cleaned up __pycache__ directory")
-        except OSError as e:
-            print(f"Warning: Could not remove __pycache__: {e}")
+    # Clean up any cache directories and __pycache__ directories
+    directories_to_remove = ["__pycache__", "cache"]
+    
+    for dir_name in directories_to_remove:
+        if os.path.exists(dir_name):
+            import shutil
+            try:
+                shutil.rmtree(dir_name)
+                print(f"Cleaned up {dir_name} directory")
+            except OSError as e:
+                print(f"Warning: Could not remove {dir_name}: {e}")
