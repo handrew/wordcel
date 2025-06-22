@@ -155,3 +155,182 @@ nodes:
         assert isinstance(results["node1"], pd.DataFrame)
         assert isinstance(results["node2"], pd.DataFrame)
         assert isinstance(results["node3"], pd.DataFrame)
+
+    def test_file_not_found_error(self):
+        """Test that file nodes give clear error messages for missing files."""
+        dag_config = """
+dag:
+  name: test_file_not_found
+
+nodes:
+  - id: missing_csv
+    type: csv
+    path: /nonexistent/file.csv
+        """
+        self.create_test_yaml(dag_config)
+        
+        dag = WordcelDAG(self.test_yaml_path)
+        
+        with pytest.raises(RuntimeError) as excinfo:
+            dag.execute()
+        
+        # The RuntimeError should contain the original FileNotFoundError message
+        assert "CSV file not found" in str(excinfo.value)
+        assert "/nonexistent/file.csv" in str(excinfo.value)
+
+    def test_get_node_info(self):
+        """Test the get_node_info() method."""
+        dag_config = """
+dag:
+  name: test_node_info
+
+nodes:
+  - id: load_data
+    type: csv
+    path: "https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv"
+
+  - id: process_data
+    type: dataframe_operation
+    input: load_data
+    operation: head
+    args: [5]
+        """
+        self.create_test_yaml(dag_config)
+        
+        dag = WordcelDAG(self.test_yaml_path)
+        info = dag.get_node_info()
+        
+        assert len(info) == 2
+        
+        # Check first node
+        assert info[0]['id'] == 'load_data'
+        assert info[0]['type'] == 'CSVNode'
+        assert 'path' in info[0]['config_keys']
+        assert info[0]['inputs'] is None
+        
+        # Check second node
+        assert info[1]['id'] == 'process_data'
+        assert info[1]['type'] == 'DataFrameOperationNode'
+        assert 'operation' in info[1]['config_keys']
+        assert info[1]['inputs'] == ['load_data']
+
+    def test_dry_run_success(self):
+        """Test dry_run() with valid configuration."""
+        dag_config = """
+dag:
+  name: test_dry_run_success
+
+nodes:
+  - id: load_data
+    type: csv
+    path: "https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv"
+
+  - id: process_data
+    type: dataframe_operation
+    input: load_data
+    operation: head
+    args: [5]
+        """
+        self.create_test_yaml(dag_config)
+        
+        dag = WordcelDAG(self.test_yaml_path)
+        result = dag.dry_run()
+        
+        assert result is True
+
+    def test_dry_run_failure(self):
+        """Test that invalid configuration is caught during DAG construction."""
+        dag_config = """
+dag:
+  name: test_dry_run_failure
+
+nodes:
+  - id: bad_csv
+    type: csv
+    # Missing required 'path' field
+        """
+        self.create_test_yaml(dag_config)
+        
+        # The DAG constructor should fail due to validation
+        with pytest.raises(AssertionError) as excinfo:
+            dag = WordcelDAG(self.test_yaml_path)
+        
+        assert "must have a 'path' configuration" in str(excinfo.value)
+
+    def test_http_urls_bypass_file_check(self):
+        """Test that HTTP URLs don't trigger file existence checks."""
+        dag_config = """
+dag:
+  name: test_http_urls
+
+nodes:
+  - id: load_remote_csv
+    type: csv
+    path: "https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv"
+        """
+        self.create_test_yaml(dag_config)
+        
+        dag = WordcelDAG(self.test_yaml_path)
+        
+        # Should not raise FileNotFoundError for HTTP URLs
+        results = dag.execute()
+        assert "load_remote_csv" in results
+        assert isinstance(results["load_remote_csv"], pd.DataFrame)
+
+    def test_rich_logging_and_timing(self):
+        """Test that DAG execution includes timing and rich formatting."""
+        dag_config = """
+dag:
+  name: test_timing
+
+nodes:
+  - id: load_data
+    type: csv
+    path: "https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv"
+
+  - id: quick_op
+    type: dataframe_operation
+    input: load_data
+    operation: head
+    args: [3]
+        """
+        self.create_test_yaml(dag_config)
+        
+        # Capture console output
+        from io import StringIO
+        import sys
+        from rich.console import Console
+        
+        output_buffer = StringIO()
+        test_console = Console(file=output_buffer, width=80)
+        
+        # Temporarily replace the console
+        import wordcel.dag.dag as dag_module
+        original_console = dag_module.console
+        dag_module.console = test_console
+        
+        try:
+            dag = WordcelDAG(self.test_yaml_path)
+            results = dag.execute()
+            
+            # Get the captured output
+            output = output_buffer.getvalue()
+            
+            # Check for expected timing and progress indicators
+            assert "Executing DAG:" in output
+            assert "test_timing" in output
+            assert "[1/2]" in output
+            assert "[2/2]" in output
+            assert "load_data" in output
+            assert "quick_op" in output
+            assert "✓" in output  # Success checkmarks
+            assert "completed successfully!" in output
+            
+            # Verify results
+            assert len(results) == 2
+            assert "load_data" in results
+            assert "quick_op" in results
+            
+        finally:
+            # Restore original console
+            dag_module.console = original_console

@@ -62,6 +62,8 @@ class CSVNode(Node):
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         path = os.path.expanduser(self.config["path"])
+        if not os.path.exists(path) and not path.startswith(('http://', 'https://')):
+            raise FileNotFoundError(f"CSV file not found: {path}")
         return pd.read_csv(path)
 
     def validate_config(self) -> bool:
@@ -74,6 +76,8 @@ class YAMLNode(Node):
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
         path = os.path.expanduser(self.config["path"])
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"YAML file not found: {path}")
         with open(path, "r") as file:
             return yaml.safe_load(file)
 
@@ -87,6 +91,8 @@ class JSONNode(Node):
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
         path = os.path.expanduser(self.config["path"])
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"JSON file not found: {path}")
         with open(path, "r") as file:
             return json.load(file)
 
@@ -100,6 +106,8 @@ class JSONDataFrameNode(Node):
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         path = os.path.expanduser(self.config["path"])
+        if not os.path.exists(path) and not path.startswith(('http://', 'https://')):
+            raise FileNotFoundError(f"JSON file not found: {path}")
         return pd.read_json(path, **self.config.get("read_json_kwargs", {}))
 
     def validate_config(self) -> bool:

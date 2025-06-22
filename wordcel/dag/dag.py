@@ -340,7 +340,7 @@ class WordcelDAG:
             start_time = time.time()
             
             # Rich formatted progress
-            console.print(f"[bold cyan]\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
+            console.print(f"[bold cyan]\\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
 
             try:
                 # Get the incoming edges and their inputs.
@@ -387,3 +387,48 @@ class WordcelDAG:
 
         console.print(f"\n[bold green]🎉 DAG completed successfully![/bold green] [dim]({total_nodes} nodes)[/dim]")
         return results
+
+    def get_node_info(self):
+        """Get summary info about all nodes in the DAG."""
+        info = []
+        for node_id in nx.topological_sort(self.graph):
+            node = self.nodes[node_id]
+            predecessors = list(self.graph.predecessors(node_id))
+            info.append({
+                'id': node_id,
+                'type': node.__class__.__name__,
+                'config_keys': list(node.config.keys()),
+                'inputs': predecessors if predecessors else None
+            })
+        return info
+
+    def dry_run(self):
+        """Validate DAG configuration without executing nodes."""
+        console.print(f"\n🔍 [bold blue]Running DAG validation:[/bold blue] [bold]{self.name}[/bold]")
+        console.print(f"📊 [dim]Total nodes: {len(self.nodes)}[/dim]\n")
+        
+        issues = []
+        nodes_list = list(nx.topological_sort(self.graph))
+        
+        for i, node_id in enumerate(nodes_list, 1):
+            node = self.nodes[node_id]
+            node_type = node.__class__.__name__
+            
+            console.print(f"[bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
+            
+            try:
+                node.validate_config()
+                console.print("[bold green]✓[/bold green]")
+            except Exception as e:
+                issues.append(f"{node_id}: {e}")
+                console.print(f"[bold red]✗[/bold red] [red]{e}[/red]")
+        
+        console.print()
+        if issues:
+            console.print(f"[red]❌ Found {len(issues)} validation issues:[/red]")
+            for issue in issues:
+                console.print(f"   [red]• {issue}[/red]")
+            return False
+        else:
+            console.print("[bold green]✅ DAG validation passed! All nodes configured correctly.[/bold green]")
+            return True
