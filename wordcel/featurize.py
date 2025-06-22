@@ -2,17 +2,20 @@
 
 import concurrent.futures
 import json
+import logging
 import os
+from typing import Any, Callable, Optional
+
 import pandas as pd
 
 
 def apply_io_bound_function(
-    df,
-    user_function,
-    text_column=None,
-    num_threads=4,
-    cache_folder=None,
-):
+    df: pd.DataFrame,
+    user_function: Callable[[str], Any],
+    text_column: Optional[str] = None,
+    num_threads: int = 4,
+    cache_folder: Optional[str] = None,
+) -> pd.Series:
     """
     Apply an I/O bound user-provided function to a specific column in a Pandas DataFrame with threading and caching.
 
@@ -33,7 +36,7 @@ def apply_io_bound_function(
 
     user_fn_name = user_function.__name__
 
-    def process_text_with_caching(text, identifier):
+    def process_text_with_caching(text: str, identifier: Any) -> Any:
         if cache_folder:
             # Check if result is already cached
             identifier = str(identifier).replace("/", "_")
@@ -43,7 +46,7 @@ def apply_io_bound_function(
             )
             if os.path.exists(cache_file):
                 with open(cache_file, "r") as f:
-                    print(f"Found cached result: {cache_file}.")
+                    logging.info(f"Found cached result: {cache_file}")
                     return json.load(f)
 
         result = user_function(text)

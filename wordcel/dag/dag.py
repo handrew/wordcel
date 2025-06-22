@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from rich import print
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-from typing import Dict, Any, Type, Callable, Union
+from typing import Dict, Any, Type, Callable, Union, Optional
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
 from .default_functions import read_sql, llm_filter, llm_call
@@ -28,9 +28,23 @@ console = Console()
 def create_node(
     node_config: Dict[str, Any],
     secrets: Dict[str, str],
-    runtime_config_params: Dict[str, str] = None,
-    custom_functions: Dict[str, Callable] = None,
+    runtime_config_params: Optional[Dict[str, str]] = None,
+    custom_functions: Optional[Dict[str, Callable]] = None,
 ) -> Node:
+    """Create a node instance from configuration.
+    
+    Args:
+        node_config: Configuration dictionary for the node
+        secrets: Dictionary of secret values
+        runtime_config_params: Runtime configuration parameters
+        custom_functions: Dictionary of custom functions to inject
+        
+    Returns:
+        Instantiated and validated node
+        
+    Raises:
+        ValueError: If node type is unknown or invalid
+    """
     node_type = node_config.get("type")
     node_class = NodeRegistry.get(node_type)
     if node_class is None:
@@ -49,8 +63,14 @@ def create_node(
 
 
 def _is_json_serializable(data: Any) -> bool:
-    """Check if the data is JSON serializable, or is a DataFrame which
-    is JSON serializable."""
+    """Check if the data is JSON serializable, or is a DataFrame which is JSON serializable.
+    
+    Args:
+        data: The data to check for JSON serializability
+        
+    Returns:
+        True if data can be serialized to JSON, False otherwise
+    """
     try:
         if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
             data.to_json(orient="records")

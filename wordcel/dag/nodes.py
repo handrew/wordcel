@@ -267,6 +267,14 @@ class LLMNode(Node):
     into a list of strings, fill in the template for each string."""
 
     def _try_to_load_as_json(self, text: str) -> Union[str, dict]:
+        """Attempt to parse text as JSON, returning original text if parsing fails.
+        
+        Args:
+            text: The text to attempt JSON parsing on
+            
+        Returns:
+            Parsed JSON dict if successful, original text string if not
+        """
         try:
             return json.loads(text)
         except json.JSONDecodeError:

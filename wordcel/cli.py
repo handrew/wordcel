@@ -192,7 +192,7 @@ def execute(
     )
 
     if input:
-        print("Given input data: ", dict(input))
+        log.info("Given input data: %s", dict(input))
 
     results = dag.execute(input_data=dict(input), verbose=verbose)
 
