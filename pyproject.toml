@@ -17,8 +17,19 @@ matplotlib = "*"
 rich = ">=13.0.0"
 litellm = "*"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+
 [tool.poetry.scripts]
 wordcel = "wordcel.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
 
 [build-system]
 requires = ["poetry-core"]
