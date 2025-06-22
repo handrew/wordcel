@@ -3,6 +3,7 @@ import os
 import json
 import logging
 from string import Template
+from datetime import datetime
 import yaml
 import pandas as pd
 import networkx as nx
@@ -377,7 +378,8 @@ class WordcelDAG:
 
     def dry_run(self):
         """Validate DAG configuration without executing nodes."""
-        console.print(f"\n🔍 [bold blue]Running DAG validation:[/bold blue] [bold]{self.name}[/bold]")
+        start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        console.print(f"\n🔍 [bold blue]Running DAG validation:[/bold blue] [bold]{self.name}[/bold] [dim]({start_timestamp})[/dim]")
         console.print(f"📊 [dim]Total nodes: {len(self.nodes)}[/dim]\n")
         
         issues = []
@@ -392,7 +394,8 @@ class WordcelDAG:
             if hasattr(node, 'config') and 'model' in node.config:
                 model_info = f" | Model: {node.config['model']}"
             
-            console.print(f"[bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim]", end=" ")
+            node_timestamp = datetime.now().strftime("%H:%M:%S")
+            console.print(f"[dim][{node_timestamp}][/dim] [bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim]", end=" ")
             
             try:
                 node.validate_config()

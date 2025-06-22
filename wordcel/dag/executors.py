@@ -1,6 +1,7 @@
 """DAG execution strategies."""
 import time
 import threading
+from datetime import datetime
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict, deque
@@ -68,7 +69,8 @@ class SequentialDAGExecutor(DAGExecutor):
         nodes_list = list(nx.topological_sort(dag.graph))
         total_nodes = len(nodes_list)
 
-        self.console.print(f"\n🚀 [bold blue]Executing DAG (Sequential):[/bold blue] [bold]{dag.name}[/bold]")
+        start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.console.print(f"\n🚀 [bold blue]Executing DAG (Sequential):[/bold blue] [bold]{dag.name}[/bold] [dim]({start_timestamp})[/dim]")
         self.console.print(f"📊 [dim]Total nodes: {total_nodes}[/dim]\n")
 
         for i, node_id in enumerate(nodes_list, 1):
@@ -82,7 +84,8 @@ class SequentialDAGExecutor(DAGExecutor):
                 from ..config import DEFAULT_MODEL
                 model = node.config.get('model', DEFAULT_MODEL)
                 model_info = f" | Model: {model}"
-            self.console.print(f"[bold cyan]\\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim] ", end="")
+            node_timestamp = datetime.now().strftime("%H:%M:%S")
+            self.console.print(f"[dim][{node_timestamp}][/dim] [bold cyan]\\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim] ", end="")
 
             try:
                 # Get the incoming edges and their inputs.
@@ -106,7 +109,8 @@ class SequentialDAGExecutor(DAGExecutor):
                         dag.backend.save(node_id, incoming_input, results[node_id])
 
                 elapsed = time.time() - start_time
-                self.console.print(f"[bold green]✓[/bold green] [green]{elapsed:.2f}s[/green]")
+                completion_timestamp = datetime.now().strftime("%H:%M:%S")
+                self.console.print(f"[dim]({completion_timestamp})[/dim] [bold green]✓[/bold green] [green]{elapsed:.2f}s[/green]")
 
                 if self.verbose:
                     self.console.print(f"[dim]Result for {node_id}:[/dim]")
@@ -115,7 +119,8 @@ class SequentialDAGExecutor(DAGExecutor):
 
             except Exception as e:
                 elapsed = time.time() - start_time
-                self.console.print(f"[bold red]❌ failed[/bold red] [red]{elapsed:.2f}s[/red]")
+                completion_timestamp = datetime.now().strftime("%H:%M:%S")
+                self.console.print(f"[dim]({completion_timestamp})[/dim] [bold red]❌ failed[/bold red] [red]{elapsed:.2f}s[/red]")
                 
                 error_context = {
                     'node_id': node_id,
@@ -216,7 +221,8 @@ class ParallelDAGExecutor(DAGExecutor):
         completed = set()
         total_nodes = len(dag.graph.nodes())
         
-        self.console.print(f"\n🚀 [bold blue]Executing DAG (Parallel):[/bold blue] [bold]{dag.name}[/bold]")
+        start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.console.print(f"\n🚀 [bold blue]Executing DAG (Parallel):[/bold blue] [bold]{dag.name}[/bold] [dim]({start_timestamp})[/dim]")
         self.console.print(f"📊 [dim]Total nodes: {total_nodes}, Max workers: {self.max_workers}[/dim]\n")
         
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -241,7 +247,8 @@ class ParallelDAGExecutor(DAGExecutor):
                             from ..config import DEFAULT_MODEL
                             model = node.config.get('model', DEFAULT_MODEL)
                             model_info = f" | Model: {model}"
-                        self.console.print(f"[bold cyan]▶️[/bold cyan] [bold]{node_id}[/bold] [dim]({node.__class__.__name__}{model_info})[/dim] [blue]starting...[/blue]")
+                        node_timestamp = datetime.now().strftime("%H:%M:%S")
+                        self.console.print(f"[dim][{node_timestamp}][/dim] [bold cyan]▶️[/bold cyan] [bold]{node_id}[/bold] [dim]({node.__class__.__name__}{model_info})[/dim] [blue]starting...[/blue]")
                 
                 # Wait for at least one node to complete
                 if future_to_node:
@@ -264,8 +271,9 @@ class ParallelDAGExecutor(DAGExecutor):
                             results[node_id] = execution_result['result']
                         
                         # Print success
+                        completion_timestamp = datetime.now().strftime("%H:%M:%S")
                         cache_indicator = "[yellow]📦 cached[/yellow]" if execution_result['cache_hit'] else "[blue]🔄 completed[/blue]"
-                        self.console.print(f"[bold green]✅[/bold green] [bold]{node_id}[/bold] {cache_indicator} [green]{execution_result['elapsed']:.2f}s[/green]")
+                        self.console.print(f"[dim]({completion_timestamp})[/dim] [bold green]✅[/bold green] [bold]{node_id}[/bold] {cache_indicator} [green]{execution_result['elapsed']:.2f}s[/green]")
                         
                         if self.verbose:
                             self.console.print(f"[dim]Result for {node_id}:[/dim]")
@@ -280,8 +288,9 @@ class ParallelDAGExecutor(DAGExecutor):
                     
                     else:
                         # Handle error
+                        completion_timestamp = datetime.now().strftime("%H:%M:%S")
                         error = execution_result['error']
-                        self.console.print(f"[bold red]❌[/bold red] [bold]{node_id}[/bold] [red]failed after {execution_result['elapsed']:.2f}s[/red]")
+                        self.console.print(f"[dim]({completion_timestamp})[/dim] [bold red]❌[/bold red] [bold]{node_id}[/bold] [red]failed after {execution_result['elapsed']:.2f}s[/red]")
                         
                         error_context = {
                             'node_id': node_id,
