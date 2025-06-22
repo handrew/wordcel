@@ -2,12 +2,15 @@
 import os
 import json
 import logging
+import time
 from string import Template
 import yaml
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 from rich import print
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from typing import Dict, Any, Type, Callable, Union
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
@@ -15,6 +18,8 @@ from .default_functions import read_sql, llm_filter, llm_call
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+console = Console()
 
 
 def create_node(
@@ -323,33 +328,62 @@ class WordcelDAG:
         """
         # Sort and execute the nodes.
         results = {}
+        nodes_list = list(nx.topological_sort(self.graph))
+        total_nodes = len(nodes_list)
 
-        for node_id in nx.topological_sort(self.graph):
-            log.info(f"Executing node `{node_id}` from DAG `{self.name}`.")
+        console.print(f"\n🚀 [bold blue]Executing DAG:[/bold blue] [bold]{self.name}[/bold]")
+        console.print(f"📊 [dim]Total nodes: {total_nodes}[/dim]\n")
+
+        for i, node_id in enumerate(nodes_list, 1):
             node = self.nodes[node_id]
-
-            # Get the incoming edges and their inputs.
-            incoming_input = self.__prepare_incoming_input(input_data, results, node_id)
+            node_type = node.__class__.__name__
+            start_time = time.time()
             
-            # Check the cache, if we have a backend.
-            if self.backend and self.backend.exists(node_id, incoming_input):
-                log.info(f"Loading node `{node_id}` from cache.")
-                results[node_id] = self.backend.load(node_id, incoming_input)
-            else:
-                results[node_id] = node.execute(incoming_input)
+            # Rich formatted progress
+            console.print(f"[bold cyan]\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
 
-                # If the node is not a DAG node, check if the result is JSON serializable.
-                is_dag_node = isinstance(node, NodeRegistry.get("dag"))
-                if not is_dag_node:
-                    self.__check_result_is_json_serializable(results, node_id)
+            try:
+                # Get the incoming edges and their inputs.
+                incoming_input = self.__prepare_incoming_input(input_data, results, node_id)
+                
+                # Check the cache, if we have a backend.
+                if self.backend and self.backend.exists(node_id, incoming_input):
+                    console.print("[yellow]📦 cache[/yellow]", end=" ")
+                    results[node_id] = self.backend.load(node_id, incoming_input)
+                else:
+                    console.print("[blue]⚡ exec[/blue]", end=" ")
+                    results[node_id] = node.execute(incoming_input)
 
-                # Don't save DAG nodes to cache, since they may have their own cache.
-                if self.backend and not is_dag_node:
-                    log.info(f"Saving node `{node_id}` to cache.")
-                    self.backend.save(node_id, incoming_input, results[node_id])
+                    # If the node is not a DAG node, check if the result is JSON serializable.
+                    is_dag_node = isinstance(node, NodeRegistry.get("dag"))
+                    if not is_dag_node:
+                        self.__check_result_is_json_serializable(results, node_id)
 
-            if verbose:
-                print(f"Result for node {node_id}:")
-                print(results[node_id])
+                    # Don't save DAG nodes to cache, since they may have their own cache.
+                    if self.backend and not is_dag_node:
+                        self.backend.save(node_id, incoming_input, results[node_id])
 
+                elapsed = time.time() - start_time
+                console.print(f"[bold green]✓[/bold green] [green]{elapsed:.2f}s[/green]")
+
+                if verbose:
+                    console.print(f"[dim]Result for {node_id}:[/dim]")
+                    print(results[node_id])
+                    console.print()
+
+            except Exception as e:
+                elapsed = time.time() - start_time
+                console.print(f"[bold red]✗[/bold red] [red]{elapsed:.2f}s[/red]")
+                
+                error_context = {
+                    'node_id': node_id,
+                    'node_type': node_type,
+                    'input_type': type(incoming_input).__name__ if incoming_input is not None else 'None',
+                    'config_keys': list(node.config.keys())
+                }
+                console.print(f"[red]Error:[/red] {e}")
+                console.print(f"[dim]Context: {error_context}[/dim]")
+                raise RuntimeError(f"Node {node_id} ({node_type}) failed: {e}") from e
+
+        console.print(f"\n[bold green]🎉 DAG completed successfully![/bold green] [dim]({total_nodes} nodes)[/dim]")
         return results
