@@ -5,13 +5,19 @@ import numpy as np
 from typing import List
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sklearn.feature_extraction.text import TfidfVectorizer
-from ..llms import openai_call, openai_embed
+from ..llms import llm_call, openai_embed
+from ..config import DEFAULT_MODEL
+
+
+def _default_llm_call(prompt: str) -> str:
+    """Wrapper for llm_call with default model.""" 
+    return llm_call(prompt, model=DEFAULT_MODEL)
 
 
 """RAG helper functions."""
 
 
-def generate_similar_queries(query, llm_fn=openai_call):
+def generate_similar_queries(query, llm_fn=_default_llm_call):
     """Generate similar queries to the input query."""
     prompt = f"""I would like you to generate queries conceptually and semantically similar
     to the following query, for use in a vector / embedding retrieval system:

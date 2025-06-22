@@ -25,6 +25,12 @@ from .utils import (
     cosine_similarity_vectorized,
 )
 from ..llms import llm_call
+from ..config import DEFAULT_MODEL
+
+
+def _default_llm_call(prompt: str) -> str:
+    """Wrapper for llm_call with default model."""
+    return llm_call(prompt, model=DEFAULT_MODEL)
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -45,7 +51,7 @@ Answer only with the succinct context and nothing else.
 """
 
 
-def situate_context(doc: str, chunk: str, llm_fn=llm_call) -> str:
+def situate_context(doc: str, chunk: str, llm_fn=_default_llm_call) -> str:
     """Situate a chunk within a document."""
     # client = anthropic.Anthropic()
     # response = client.beta.prompt_caching.messages.create(
@@ -79,7 +85,7 @@ def situate_context(doc: str, chunk: str, llm_fn=llm_call) -> str:
 
 class ContextualRetrieval:
     def __init__(
-        self, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=llm_call
+        self, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=_default_llm_call
     ):
         self.docs = docs
         self.chunk_size = chunk_size
@@ -93,13 +99,13 @@ class ContextualRetrieval:
         self.tfidf_index = None
 
     @classmethod
-    def from_documents(cls, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=llm_call):
+    def from_documents(cls, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=_default_llm_call):
         instance = cls(docs, chunk_size=chunk_size, chunk_overlap=chunk_overlap, llm_fn=llm_fn)
         instance.index_documents()
         return instance
 
     @classmethod
-    def from_saved(cls, path: str, chunk_size=1024, chunk_overlap=10, llm_fn=llm_call):
+    def from_saved(cls, path: str, chunk_size=1024, chunk_overlap=10, llm_fn=_default_llm_call):
         instance = cls([], chunk_size=chunk_size, chunk_overlap=chunk_overlap, llm_fn=llm_fn)
         instance.load(path)
         return instance
@@ -247,7 +253,7 @@ class ContextualRetrieval:
         top_k: int = 5,
         semantic_weight=0.8,
         tfidf_weight=0.2,
-        llm_fn=llm_call,
+        llm_fn=_default_llm_call,
     ) -> str:
         """Retrieves top-k chunks using `search_query` and generates the
         response given those chunks using `generation_query` if given or

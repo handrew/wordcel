@@ -15,6 +15,7 @@ import concurrent.futures
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Type, Callable, List, Union
 from .default_functions import read_sql, llm_filter
+from ..config import DEFAULT_MODEL
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -269,7 +270,7 @@ class LLMNode(Node):
         llm_call = self.functions["llm_call"]
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
-        model = self.config.get("model", "gpt-4o-mini")
+        model = self.config.get("model", DEFAULT_MODEL)
         if num_threads > 1:
             log.info(f"Using {num_threads} threads for LLM Node.")
 
@@ -373,7 +374,7 @@ class LLMFilterNode(Node):
     def execute(self, input_data: pd.DataFrame) -> Union[pd.DataFrame, pd.Series]:
         is_dataframe = isinstance(input_data, pd.DataFrame)
         assert is_dataframe, "LLMFilterNode must have a DataFrame as input."
-        model = self.config.get("model", "gpt-4o-mini")
+        model = self.config.get("model", DEFAULT_MODEL)
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
         if num_threads > 1:
