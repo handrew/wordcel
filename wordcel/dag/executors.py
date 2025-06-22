@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict, deque
 from typing import Dict, Any, TYPE_CHECKING
+from tenacity import retry, stop_after_attempt, wait_exponential
 from rich.console import Console
 
 if TYPE_CHECKING:
@@ -125,7 +126,12 @@ class SequentialDAGExecutor(DAGExecutor):
                     results[node_id] = dag.backend.load(node_id, incoming_input)
                 else:
                     self.console.print("→ [blue]🔄 running[/blue] ", end="")
-                    results[node_id] = node.execute(incoming_input)
+                    
+                    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+                    def _execute_with_retry():
+                        return node.execute(incoming_input)
+                    
+                    results[node_id] = _execute_with_retry()
 
                     # If the node is not a DAG node, check if the result is JSON serializable.
                     is_dag_node = isinstance(node, NodeRegistry.get("dag"))
@@ -212,7 +218,11 @@ class ParallelDAGExecutor(DAGExecutor):
                 result = dag.backend.load(node_id, incoming_input)
                 cache_hit = True
             else:
-                result = node.execute(incoming_input)
+                @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+                def _execute_with_retry():
+                    return node.execute(incoming_input)
+                
+                result = _execute_with_retry()
 
                 # Validate result is JSON serializable
                 is_dag_node = isinstance(node, NodeRegistry.get("dag"))

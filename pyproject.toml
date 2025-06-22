@@ -15,6 +15,7 @@ networkx = "*"
 click = "*"
 matplotlib = "*"
 rich = ">=13.0.0"
+tenacity = "*"
 litellm = "*"
 
 [tool.poetry.group.dev.dependencies]
