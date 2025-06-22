@@ -1,13 +1,12 @@
 """CLI for Wordcel."""
 
 import os
-import logging
 import click
 from rich import print
 from wordcel.dag.utils import initialize_dag
+from wordcel.logging_config import get_logger
 
-log: logging.Logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+log = get_logger("cli")
 
 PIPELINE_TEMPLATE = """
 dag:

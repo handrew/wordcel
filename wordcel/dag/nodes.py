@@ -16,9 +16,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Type, Callable, List, Union
 from .default_functions import read_sql, llm_filter
 from ..config import DEFAULT_MODEL
+from ..logging_config import get_logger
 
-log: logging.Logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+log = get_logger("dag.nodes")
 
 
 class Node(ABC):

@@ -321,7 +321,7 @@ nodes:
             assert "test_timing" in output
             assert "load_data" in output
             assert "quick_op" in output
-            assert "✓" in output  # Success checkmarks
+            assert "✅" in output  # Success checkmarks
             assert "completed successfully!" in output
             
             # Verify results

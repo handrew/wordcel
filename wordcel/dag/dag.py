@@ -1,7 +1,6 @@
 """DAG definition and node implementations."""
 import os
 import json
-import logging
 from string import Template
 from datetime import datetime
 import yaml
@@ -16,11 +15,9 @@ from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
 from .default_functions import read_sql, llm_filter, llm_call
 from .executors import ExecutorRegistry
+from ..logging_config import get_logger
 
-log: logging.Logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("LiteLLM").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
+log = get_logger("dag.dag")
 
 console = Console()
 

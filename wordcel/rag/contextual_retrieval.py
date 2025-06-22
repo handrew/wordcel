@@ -32,8 +32,8 @@ def _default_llm_call(prompt: str) -> str:
     """Wrapper for llm_call with default model."""
     return llm_call(prompt, model=DEFAULT_MODEL)
 
-log: logging.Logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+from ..logging_config import get_logger
+log = get_logger("rag.contextual_retrieval")
 
 DOCUMENT_CONTEXT_PROMPT = """
 <document>
