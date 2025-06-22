@@ -62,19 +62,36 @@ Much of Silver's approach can be characterized by using probabilistic and statis
 docs = [capybara, kerodon, nate_silver]
 
 
+import os
+import pytest
+
+
 def test_indexing_and_save():
     retriever = ContextualRetrieval(docs)
     retriever.index_documents()
-    print(retriever.retrieve("what genus is a capybara?"))
+    result = retriever.retrieve("what genus is a capybara?")
+    assert result is not None
     retriever.save("retriever.pkl")
+    assert os.path.exists("retriever.pkl")
 
 
 def test_load_and_retrieve():
+    # Ensure we have a saved retriever first
+    if not os.path.exists("retriever.pkl"):
+        test_indexing_and_save()
+    
     retriever = ContextualRetrieval.from_saved("retriever.pkl")
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(retriever.retrieve("what genus is a capybara?"))
-    print(retriever.generate("what genus is a capybara?"))
+    result = retriever.retrieve("what genus is a capybara?")
+    assert result is not None
+    
+    generated = retriever.generate("what genus is a capybara?")
+    assert generated is not None
+    assert len(generated) > 0
 
 
-test_indexing_and_save()
-test_load_and_retrieve()
+@pytest.fixture(scope="session", autouse=True)
+def cleanup():
+    yield
+    # Clean up test files
+    if os.path.exists("retriever.pkl"):
+        os.remove("retriever.pkl")

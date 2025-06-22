@@ -1,13 +1,14 @@
-import unittest
 import tempfile
 import os
+import pytest
 from unittest.mock import patch
 from wordcel.dag import WordcelDAG
 
 
-class TestDAGNode(unittest.TestCase):
+class TestDAGNode:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         # URL of the CSV file
 
         # Sub-DAG YAML configuration
@@ -45,10 +46,10 @@ nodes:
     path: output.txt
 """
 
-    @patch("wordcel.llms.openai_call")
-    def test_dag_node(self, mock_openai_call):
+    @patch("wordcel.llms.llm_call")
+    def test_dag_node(self, mock_llm_call):
         # Mock the LLM call to return a fixed response
-        mock_openai_call.return_value = "Mocked LLM response"
+        mock_llm_call.return_value = "Mocked LLM response"
 
         # Create temporary sub-DAG YAML file
         with tempfile.NamedTemporaryFile(
@@ -70,18 +71,18 @@ nodes:
             results = dag.execute()
 
             # Check if the sub_dag was executed
-            self.assertIn("sub_dag", results)
-            self.assertIsInstance(results["sub_dag"], dict)
-            self.assertIn("csv_node", results["sub_dag"])
-            self.assertIn("head_node", results["sub_dag"])
-            self.assertIn("llm_node", results["sub_dag"])
+            assert "sub_dag" in results
+            assert isinstance(results["sub_dag"], dict)
+            assert "csv_node" in results["sub_dag"]
+            assert "head_node" in results["sub_dag"]
+            assert "llm_node" in results["sub_dag"]
 
             # Check if the head operation was applied correctly
-            self.assertEqual(len(results["sub_dag"]["head_node"]), 5)
+            assert len(results["sub_dag"]["head_node"]) == 5
 
             # Check if the file_writer node was executed
-            self.assertIn("file_writer", results)
-            self.assertTrue(os.path.exists("output.txt"))
+            assert "file_writer" in results
+            assert os.path.exists("output.txt")
 
         finally:
             # Clean up temporary files
@@ -91,5 +92,3 @@ nodes:
                 os.unlink("output.txt")
 
 
-if __name__ == "__main__":
-    unittest.main()

@@ -1,11 +1,11 @@
 import pandas as pd
 from wordcel.featurize import apply_io_bound_function
-from wordcel.llms import openai_call
+from wordcel.llms import llm_call
 
 
 def sentiment_classify(text: str) -> str:
     prompt = f"Classify the sentiment of the following text into one of two categories, POS or NEG. Respond in one word only.\n\n{text}"
-    return openai_call(prompt, model="gpt-3.5-turbo", max_tokens=32)
+    return llm_call(prompt, model="openai/gpt-3.5-turbo", max_tokens=32)
 
 
 if __name__ == "__main__":

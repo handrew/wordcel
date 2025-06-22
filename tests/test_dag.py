@@ -1,18 +1,21 @@
-import unittest
 import os
 import pandas as pd
+import pytest
 from wordcel.dag import WordcelDAG
 
 
-class TestWordcelDAG(unittest.TestCase):
-    def setUp(self):
+class TestWordcelDAG:
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self):
+        # Setup
         self.test_yaml_path = "test_dag.yaml"
         self.test_output_path = "test_output.txt"
         self.test_image_path = "test_dag.png"
         self.test_combined_output_path = "test_combined_output.csv"
-
-    def tearDown(self):
-        # Clean up any files created during tests
+        
+        yield
+        
+        # Teardown
         for file_path in [
             self.test_yaml_path,
             self.test_output_path,
@@ -68,9 +71,9 @@ nodes:
         dag.save_image(self.test_image_path)
         results = dag.execute()
 
-        self.assertTrue(os.path.exists(self.test_image_path))
-        self.assertTrue(os.path.exists(self.test_output_path))
-        self.assertIn("save_results", results)
+        assert os.path.exists(self.test_image_path)
+        assert os.path.exists(self.test_output_path)
+        assert "save_results" in results
 
     def test_pipeline_with_dataframe_operation(self):
         dag_config = """
@@ -105,8 +108,8 @@ nodes:
         dag = WordcelDAG(self.test_yaml_path)
         results = dag.execute()
 
-        self.assertTrue(os.path.exists(self.test_combined_output_path))
-        self.assertIn("output", results)
+        assert os.path.exists(self.test_combined_output_path)
+        assert "output" in results
 
     def test_pipeline_with_multiple_inputs_outputs(self):
         dag_config = """
@@ -147,12 +150,8 @@ nodes:
         dag = WordcelDAG(self.test_yaml_path)
         results = dag.execute()
 
-        self.assertTrue(os.path.exists(self.test_output_path))
-        self.assertIn("node5", results)
-        self.assertIsInstance(results["node1"], pd.DataFrame)
-        self.assertIsInstance(results["node2"], pd.DataFrame)
-        self.assertIsInstance(results["node3"], pd.DataFrame)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert os.path.exists(self.test_output_path)
+        assert "node5" in results
+        assert isinstance(results["node1"], pd.DataFrame)
+        assert isinstance(results["node2"], pd.DataFrame)
+        assert isinstance(results["node3"], pd.DataFrame)
