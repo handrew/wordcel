@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wordcel"
-version = "0.3.4"
+version = "0.4.0"
 description = "Swiss army-knife for composing LLM outputs"
 authors = ["Andrew Han <handrew11@gmail.com>"]
 readme = "README.md"
