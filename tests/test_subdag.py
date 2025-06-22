@@ -90,5 +90,3 @@ nodes:
             os.unlink(main_dag_path)
             if os.path.exists("output.txt"):
                 os.unlink("output.txt")
-
-

@@ -31,7 +31,9 @@ def _default_llm_call(prompt: str) -> str:
     """Wrapper for llm_call with default model."""
     return llm_call(prompt, model=DEFAULT_MODEL)
 
+
 from ..logging_config import get_logger
+
 log = get_logger("rag.contextual_retrieval")
 
 DOCUMENT_CONTEXT_PROMPT = """
@@ -84,7 +86,11 @@ def situate_context(doc: str, chunk: str, llm_fn=_default_llm_call) -> str:
 
 class ContextualRetrieval:
     def __init__(
-        self, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=_default_llm_call
+        self,
+        docs: List[str],
+        chunk_size=1024,
+        chunk_overlap=10,
+        llm_fn=_default_llm_call,
     ):
         self.docs = docs
         self.chunk_size = chunk_size
@@ -98,14 +104,26 @@ class ContextualRetrieval:
         self.tfidf_index = None
 
     @classmethod
-    def from_documents(cls, docs: List[str], chunk_size=1024, chunk_overlap=10, llm_fn=_default_llm_call):
-        instance = cls(docs, chunk_size=chunk_size, chunk_overlap=chunk_overlap, llm_fn=llm_fn)
+    def from_documents(
+        cls,
+        docs: List[str],
+        chunk_size=1024,
+        chunk_overlap=10,
+        llm_fn=_default_llm_call,
+    ):
+        instance = cls(
+            docs, chunk_size=chunk_size, chunk_overlap=chunk_overlap, llm_fn=llm_fn
+        )
         instance.index_documents()
         return instance
 
     @classmethod
-    def from_saved(cls, path: str, chunk_size=1024, chunk_overlap=10, llm_fn=_default_llm_call):
-        instance = cls([], chunk_size=chunk_size, chunk_overlap=chunk_overlap, llm_fn=llm_fn)
+    def from_saved(
+        cls, path: str, chunk_size=1024, chunk_overlap=10, llm_fn=_default_llm_call
+    ):
+        instance = cls(
+            [], chunk_size=chunk_size, chunk_overlap=chunk_overlap, llm_fn=llm_fn
+        )
         instance.load(path)
         return instance
 
@@ -134,7 +152,9 @@ class ContextualRetrieval:
                 for doc_chunk in doc_chunks:
                     if situate:
                         situated_chunk = (
-                            situate_context(self.docs[doc_idx], doc_chunk, llm_fn=self.llm_fn)
+                            situate_context(
+                                self.docs[doc_idx], doc_chunk, llm_fn=self.llm_fn
+                            )
                             + "\n\n"
                             + doc_chunk
                         )

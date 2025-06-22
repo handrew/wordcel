@@ -1,4 +1,5 @@
 """DAG definition and node implementations."""
+
 import os
 import json
 from string import Template
@@ -9,7 +10,13 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from rich import print
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TimeElapsedColumn,
+)
 from typing import Dict, Any, Type, Callable, Union, Optional
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
@@ -29,16 +36,16 @@ def create_node(
     custom_functions: Optional[Dict[str, Callable]] = None,
 ) -> Node:
     """Create a node instance from configuration.
-    
+
     Args:
         node_config: Configuration dictionary for the node
         secrets: Dictionary of secret values
         runtime_config_params: Runtime configuration parameters
         custom_functions: Dictionary of custom functions to inject
-        
+
     Returns:
         Instantiated and validated node
-        
+
     Raises:
         ValueError: If node type is unknown or invalid
     """
@@ -53,7 +60,7 @@ def create_node(
         node_config,
         secrets,
         runtime_config_params=runtime_config_params,
-        custom_functions=custom_functions
+        custom_functions=custom_functions,
     )
     node.validate_config()
     return node
@@ -61,10 +68,10 @@ def create_node(
 
 def _is_json_serializable(data: Any) -> bool:
     """Check if the data is JSON serializable, or is a DataFrame which is JSON serializable.
-    
+
     Args:
         data: The data to check for JSON serializability
-        
+
     Returns:
         True if data can be serialized to JSON, False otherwise
     """
@@ -99,9 +106,12 @@ def _is_json_serializable(data: Any) -> bool:
 
 """DAG definition."""
 
+
 def _assert_dag_param_is_valid(dag_definition):
     """Assert that the DAG definition is valid."""
-    assert isinstance(dag_definition, (str, dict)), "DAG definition must be a string or dictionary."
+    assert isinstance(
+        dag_definition, (str, dict)
+    ), "DAG definition must be a string or dictionary."
     if isinstance(dag_definition, str):
         assert os.path.exists(
             os.path.expanduser(dag_definition)
@@ -155,17 +165,19 @@ class WordcelDAG:
             self.config = dag_definition
         self.name = self.config["dag"]["name"]
         self.backend_config = self.config["dag"].get("backend", {})
-        
+
         # Executor configuration
         self.executor_config = self.config["dag"].get("executor", {})
         self.executor_type = self.executor_config.get("type", "parallel")
         self.max_workers = self.executor_config.get("max_workers", 4)
-        
+
         # Legacy support for old configuration format
         if "max_workers" in self.config["dag"]:
             self.max_workers = self.config["dag"]["max_workers"]
         if "enable_parallel" in self.config["dag"]:
-            self.executor_type = "parallel" if self.config["dag"]["enable_parallel"] else "sequential"
+            self.executor_type = (
+                "parallel" if self.config["dag"]["enable_parallel"] else "sequential"
+            )
 
         # Then load the secrets.
         self.secrets = {}
@@ -226,7 +238,6 @@ class WordcelDAG:
             return result
         else:
             raise ValueError(f"Unknown file type: {yaml_file}")
-    
 
     @staticmethod
     def load_secrets(secrets) -> Dict[str, str]:
@@ -237,15 +248,13 @@ class WordcelDAG:
         if isinstance(secrets, str):
             assert os.path.exists(
                 os.path.expanduser(secrets)
-            ), f"Secrets file `{secrets}` does not exist."  
-            assert secrets.endswith(    
-                ".yaml"
-            ), "Secrets file must be a YAML file."  
+            ), f"Secrets file `{secrets}` does not exist."
+            assert secrets.endswith(".yaml"), "Secrets file must be a YAML file."
 
         # If it's a dict, return it.
         if isinstance(secrets, dict):
             return secrets
-        
+
         # Load the YAML file.
         return WordcelDAG.load_yaml(secrets)
 
@@ -319,18 +328,21 @@ class WordcelDAG:
                     node_config,
                     self.secrets,
                     runtime_config_params=self.runtime_config_params,
-                    custom_functions=self.default_functions
+                    custom_functions=self.default_functions,
                 )
             except ValueError as e:
                 raise ValueError(f"Error creating node {node_id}: {str(e)}")
         return nodes
 
-
     def __prepare_incoming_input(self, input_data, results, node_id: str):
         """Prepare the incoming input for a node."""
         incoming_edges = self.graph.nodes[node_id].get("input")
         incoming_input = None
-        if input_data is not None and isinstance(input_data, dict) and node_id in input_data:
+        if (
+            input_data is not None
+            and isinstance(input_data, dict)
+            and node_id in input_data
+        ):
             # First check if the input data is given at runtime.
             # If so, we don't need to look at the incoming edges.
             assert (
@@ -343,7 +355,7 @@ class WordcelDAG:
             incoming_input = results.get(incoming_edges)
 
         return incoming_input
-    
+
     def __check_result_is_json_serializable(self, results, node_id: str):
         if not _is_json_serializable(results[node_id]):
             result_type = type(results[node_id]).__name__
@@ -351,8 +363,14 @@ class WordcelDAG:
                 f"Node `{node_id}` returned type `{result_type}`, which either is not serializable or contains something, like a DataFrame, that is not serializable."
             )
 
-    def execute(self, input_data: Dict[str, Any] = None, verbose=False, 
-                executor_type: str = None, console=None, **executor_kwargs) -> Dict[str, Any]:
+    def execute(
+        self,
+        input_data: Dict[str, Any] = None,
+        verbose=False,
+        executor_type: str = None,
+        console=None,
+        **executor_kwargs,
+    ) -> Dict[str, Any]:
         """Execute the DAG using the specified executor.
 
         @param input_data: A dictionary of input data for the nodes. The key
@@ -364,17 +382,19 @@ class WordcelDAG:
         """
         # Determine executor type to use
         exec_type = executor_type or self.executor_type
-        
+
         # Create executor with configuration
-        executor_args = {'verbose': verbose}
+        executor_args = {"verbose": verbose}
         if console:
-            executor_args['console'] = console
+            executor_args["console"] = console
         if exec_type == "parallel":
-            executor_args['max_workers'] = executor_kwargs.get('max_workers', self.max_workers)
-        
+            executor_args["max_workers"] = executor_kwargs.get(
+                "max_workers", self.max_workers
+            )
+
         # Override with any additional kwargs
         executor_args.update(executor_kwargs)
-        
+
         # Create and run executor
         executor = ExecutorRegistry.create(exec_type, **executor_args)
         return executor.execute(self, input_data)
@@ -385,12 +405,14 @@ class WordcelDAG:
         for node_id in nx.topological_sort(self.graph):
             node = self.nodes[node_id]
             predecessors = list(self.graph.predecessors(node_id))
-            info.append({
-                'id': node_id,
-                'type': node.__class__.__name__,
-                'config_keys': list(node.config.keys()),
-                'inputs': predecessors if predecessors else None
-            })
+            info.append(
+                {
+                    "id": node_id,
+                    "type": node.__class__.__name__,
+                    "config_keys": list(node.config.keys()),
+                    "inputs": predecessors if predecessors else None,
+                }
+            )
         return info
 
     def get_execution_order(self):
@@ -400,31 +422,36 @@ class WordcelDAG:
     def dry_run(self):
         """Validate DAG configuration without executing nodes."""
         start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        console.print(f"\n🔍 [bold blue]Running DAG validation:[/bold blue] [bold]{self.name}[/bold] [dim]({start_timestamp})[/dim]")
+        console.print(
+            f"\n🔍 [bold blue]Running DAG validation:[/bold blue] [bold]{self.name}[/bold] [dim]({start_timestamp})[/dim]"
+        )
         console.print(f"📊 [dim]Total nodes: {len(self.nodes)}[/dim]\n")
-        
+
         issues = []
         nodes_list = list(nx.topological_sort(self.graph))
-        
+
         for i, node_id in enumerate(nodes_list, 1):
             node = self.nodes[node_id]
             node_type = node.__class__.__name__
-            
+
             # Add model info if available
             model_info = ""
-            if hasattr(node, 'config') and 'model' in node.config:
+            if hasattr(node, "config") and "model" in node.config:
                 model_info = f" | Model: {node.config['model']}"
-            
+
             node_timestamp = datetime.now().strftime("%H:%M:%S")
-            console.print(f"[dim][{node_timestamp}][/dim] [bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim]", end=" ")
-            
+            console.print(
+                f"[dim][{node_timestamp}][/dim] [bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim]",
+                end=" ",
+            )
+
             try:
                 node.validate_config()
                 console.print("[bold green]✓[/bold green]")
             except Exception as e:
                 issues.append(f"{node_id}: {e}")
                 console.print(f"[bold red]✗[/bold red] [red]{e}[/red]")
-        
+
         console.print()
         if issues:
             console.print(f"[red]❌ Found {len(issues)} validation issues:[/red]")
@@ -432,5 +459,7 @@ class WordcelDAG:
                 console.print(f"   [red]• {issue}[/red]")
             return False
         else:
-            console.print("[bold green]✅ DAG validation passed! All nodes configured correctly.[/bold green]")
+            console.print(
+                "[bold green]✅ DAG validation passed! All nodes configured correctly.[/bold green]"
+            )
             return True

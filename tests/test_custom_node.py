@@ -88,8 +88,9 @@ class TestMultiplyNodeAndDAG(unittest.TestCase):
         # Mock the necessary components
         mock_csv_data = pd.DataFrame({"value": [1, 2, 3]})
 
-        with patch("pandas.read_csv", return_value=mock_csv_data), \
-             patch("os.path.exists", return_value=True):
+        with patch("pandas.read_csv", return_value=mock_csv_data), patch(
+            "os.path.exists", return_value=True
+        ):
             # Create and execute the DAG
             dag = WordcelDAG(temp_file_path, custom_nodes={"multiply": MultiplyNode})
             results = dag.execute()

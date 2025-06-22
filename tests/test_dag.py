@@ -12,9 +12,9 @@ class TestWordcelDAG:
         self.test_output_path = "test_output.txt"
         self.test_image_path = "test_dag.png"
         self.test_combined_output_path = "test_combined_output.csv"
-        
+
         yield
-        
+
         # Teardown
         for file_path in [
             self.test_yaml_path,
@@ -168,12 +168,12 @@ nodes:
     path: /nonexistent/file.csv
         """
         self.create_test_yaml(dag_config)
-        
+
         dag = WordcelDAG(self.test_yaml_path)
-        
+
         with pytest.raises(RuntimeError) as excinfo:
             dag.execute()
-        
+
         # The RuntimeError should contain the original FileNotFoundError message
         assert "CSV file not found" in str(excinfo.value)
         assert "/nonexistent/file.csv" in str(excinfo.value)
@@ -196,23 +196,23 @@ nodes:
     args: [5]
         """
         self.create_test_yaml(dag_config)
-        
+
         dag = WordcelDAG(self.test_yaml_path)
         info = dag.get_node_info()
-        
+
         assert len(info) == 2
-        
+
         # Check first node
-        assert info[0]['id'] == 'load_data'
-        assert info[0]['type'] == 'CSVNode'
-        assert 'path' in info[0]['config_keys']
-        assert info[0]['inputs'] is None
-        
+        assert info[0]["id"] == "load_data"
+        assert info[0]["type"] == "CSVNode"
+        assert "path" in info[0]["config_keys"]
+        assert info[0]["inputs"] is None
+
         # Check second node
-        assert info[1]['id'] == 'process_data'
-        assert info[1]['type'] == 'DataFrameOperationNode'
-        assert 'operation' in info[1]['config_keys']
-        assert info[1]['inputs'] == ['load_data']
+        assert info[1]["id"] == "process_data"
+        assert info[1]["type"] == "DataFrameOperationNode"
+        assert "operation" in info[1]["config_keys"]
+        assert info[1]["inputs"] == ["load_data"]
 
     def test_get_execution_order(self):
         """Test the get_execution_order() method returns correct topological order."""
@@ -243,20 +243,20 @@ nodes:
     operation: describe
         """
         self.create_test_yaml(dag_config)
-        
+
         dag = WordcelDAG(self.test_yaml_path)
         execution_order = dag.get_execution_order()
-        
+
         # Check that we get all nodes
         assert len(execution_order) == 4
-        assert set(execution_order) == {'node_a', 'node_b', 'node_c', 'node_d'}
-        
+        assert set(execution_order) == {"node_a", "node_b", "node_c", "node_d"}
+
         # Check topological ordering constraints
         # node_a must come before node_b and node_d
-        assert execution_order.index('node_a') < execution_order.index('node_b')
-        assert execution_order.index('node_a') < execution_order.index('node_d')
+        assert execution_order.index("node_a") < execution_order.index("node_b")
+        assert execution_order.index("node_a") < execution_order.index("node_d")
         # node_b must come before node_c
-        assert execution_order.index('node_b') < execution_order.index('node_c')
+        assert execution_order.index("node_b") < execution_order.index("node_c")
 
     def test_dry_run_success(self):
         """Test dry_run() with valid configuration."""
@@ -276,10 +276,10 @@ nodes:
     args: [5]
         """
         self.create_test_yaml(dag_config)
-        
+
         dag = WordcelDAG(self.test_yaml_path)
         result = dag.dry_run()
-        
+
         assert result is True
 
     def test_dry_run_failure(self):
@@ -294,11 +294,11 @@ nodes:
     # Missing required 'path' field
         """
         self.create_test_yaml(dag_config)
-        
+
         # The DAG constructor should fail due to validation
         with pytest.raises(AssertionError) as excinfo:
             dag = WordcelDAG(self.test_yaml_path)
-        
+
         assert "must have a 'path' configuration" in str(excinfo.value)
 
     def test_http_urls_bypass_file_check(self):
@@ -313,9 +313,9 @@ nodes:
     path: "https://raw.githubusercontent.com/cs109/2014_data/master/countries.csv"
         """
         self.create_test_yaml(dag_config)
-        
+
         dag = WordcelDAG(self.test_yaml_path)
-        
+
         # Should not raise FileNotFoundError for HTTP URLs
         results = dag.execute()
         assert "load_remote_csv" in results
@@ -339,40 +339,43 @@ nodes:
     args: [3]
         """
         self.create_test_yaml(dag_config)
-        
+
         # Capture console output
         from io import StringIO
         import sys
         from rich.console import Console
-        
+
         output_buffer = StringIO()
         test_console = Console(file=output_buffer, width=80)
-        
+
         # Temporarily replace the console
         import wordcel.dag.dag as dag_module
+
         original_console = dag_module.console
         dag_module.console = test_console
-        
+
         try:
             dag = WordcelDAG(self.test_yaml_path)
             results = dag.execute(console=test_console)
-            
+
             # Get the captured output
             output = output_buffer.getvalue()
-            
+
             # Check for expected timing and progress indicators
-            assert "Executing DAG" in output  # Works for both "Executing DAG:" and "Executing DAG (Parallel):"
+            assert (
+                "Executing DAG" in output
+            )  # Works for both "Executing DAG:" and "Executing DAG (Parallel):"
             assert "test_timing" in output
             assert "load_data" in output
             assert "quick_op" in output
             assert "✅" in output  # Success checkmarks
             assert "completed successfully!" in output
-            
+
             # Verify results
             assert len(results) == 2
             assert "load_data" in results
             assert "quick_op" in results
-            
+
         finally:
             # Restore original console
             dag_module.console = original_console

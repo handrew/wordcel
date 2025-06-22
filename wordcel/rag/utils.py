@@ -10,7 +10,7 @@ from ..config import DEFAULT_MODEL
 
 
 def _default_llm_call(prompt: str) -> str:
-    """Wrapper for llm_call with default model.""" 
+    """Wrapper for llm_call with default model."""
     return llm_call(prompt, model=DEFAULT_MODEL)
 
 

@@ -109,7 +109,7 @@ nodes:
 @click.version_option(message=lambda: show_version_info() or "")
 def main():
     """🧠 Wordcel - Swiss army-knife for composing LLM outputs
-    
+
     Wordcel provides a flexible framework for building and executing
     LLM-powered data processing pipelines using simple YAML configuration.
     """
@@ -119,7 +119,7 @@ def main():
 @main.group(cls=RichGroup)
 def dag():
     """🔗 WordcelDAG commands for pipeline management
-    
+
     Create, execute, and visualize LLM processing pipelines using
     declarative YAML configuration files.
     """
@@ -128,15 +128,16 @@ def dag():
 
 @dag.command(cls=RichCommand)
 @click.argument("pipeline_file")
-@click.option("--template",
-              help="Pipeline template to use (basic, advanced, rag, analysis)")
+@click.option(
+    "--template", help="Pipeline template to use (basic, advanced, rag, analysis)"
+)
 @click.option("--force", "-f", is_flag=True, help="Overwrite existing file")
 def new(pipeline_file, template, force):
     """📝 Create a new pipeline configuration file
-    
+
     Creates a new YAML pipeline configuration with helpful examples and comments.
     Choose from different templates based on your use case:
-    
+
     - basic: Simple CSV processing with LLM
     - advanced: Multi-step complex pipeline
     - rag: Retrieval Augmented Generation
@@ -144,7 +145,9 @@ def new(pipeline_file, template, force):
     """
     if os.path.exists(pipeline_file) and not force:
         console.print(f"[red]✗[/red] Pipeline file {pipeline_file} already exists.")
-        console.print("Use [cyan]--force[/cyan] to overwrite or choose a different name.")
+        console.print(
+            "Use [cyan]--force[/cyan] to overwrite or choose a different name."
+        )
         return
 
     # Use template-specific content if specified
@@ -168,19 +171,21 @@ def new(pipeline_file, template, force):
 @dag.command(cls=RichCommand)
 def list_node_types():
     """📋 List all available node types with descriptions
-    
+
     Shows all node types that can be used in pipeline configurations,
     including their descriptions and capabilities.
     """
     from wordcel.dag.nodes import NODE_TYPES
     from rich.table import Table
 
-    table = Table(title="Available Node Types", show_header=True, header_style="bold cyan")
+    table = Table(
+        title="Available Node Types", show_header=True, header_style="bold cyan"
+    )
     table.add_column("Type", style="cyan", min_width=20)
     table.add_column("Description", style="white")
 
     for node_type, node_class in sorted(NODE_TYPES.items()):
-        description = getattr(node_class, 'description', 'No description available')
+        description = getattr(node_class, "description", "No description available")
         table.add_row(f"[bold]{node_type}[/bold]", description)
 
     console.print(table)
@@ -253,14 +258,13 @@ def execute(
     from rich.panel import Panel
     from rich.tree import Tree
 
-    
     dag = initialize_dag(
         pipeline_file,
         config_params=dict(config_param),
         secrets=secrets,
         custom_nodes=custom_nodes,
         custom_functions=custom_functions,
-        custom_backends=custom_backends
+        custom_backends=custom_backends,
     )
 
     if input:
@@ -328,7 +332,7 @@ def dryrun(
     config_param,
 ):
     """🔍 Show what would be executed without running the pipeline
-    
+
     Validates the pipeline configuration and displays the execution plan
     including node dependencies, order, and configuration details.
     """
@@ -344,57 +348,59 @@ def dryrun(
             secrets=secrets,
             custom_nodes=custom_nodes,
             custom_functions=custom_functions,
-            custom_backends=custom_backends
+            custom_backends=custom_backends,
         )
     except Exception as e:
         console.print(f"[red]✗ Failed to initialize DAG:[/red] {e}")
         return
 
     console.print(f"[green]✅ Pipeline validation successful:[/green] {pipeline_file}")
-    
+
     # Show DAG info
     dag_info = Table(title="Pipeline Information", show_header=False)
     dag_info.add_column("Property", style="cyan", min_width=15)
     dag_info.add_column("Value", style="white")
-    
+
     dag_info.add_row("Name", dag.name or "Unnamed Pipeline")
     dag_info.add_row("Nodes", str(len(dag.nodes)))
     dag_info.add_row("File", pipeline_file)
-    
+
     if input:
         dag_info.add_row("Input Data", str(dict(input)))
-    
+
     console.print(dag_info)
-    
+
     # Show execution order
     execution_order = dag.get_execution_order()
     tree = Tree("🔄 [bold blue]Execution Plan")
-    
+
     for i, node_id in enumerate(execution_order, 1):
         node = dag.nodes[node_id]
-        node_tree = tree.add(f"[bold yellow]{i}.[/bold yellow] [bold green]{node_id}[/bold green] ({node.__class__.__name__})")
-        
+        node_tree = tree.add(
+            f"[bold yellow]{i}.[/bold yellow] [bold green]{node_id}[/bold green] ({node.__class__.__name__})"
+        )
+
         # Show dependencies
-        if hasattr(node, 'input') and node.input:
+        if hasattr(node, "input") and node.input:
             if isinstance(node.input, list):
                 deps = ", ".join(node.input)
             else:
                 deps = str(node.input)
             node_tree.add(f"[dim]depends on:[/dim] {deps}")
-        
+
         # Show key config
         config_items = []
         for key, value in node.config.items():
-            if key not in ['id', 'type', 'input'] and value is not None:
+            if key not in ["id", "type", "input"] and value is not None:
                 if isinstance(value, str) and len(value) > 50:
                     value = value[:47] + "..."
                 config_items.append(f"{key}: {value}")
-        
+
         if config_items:
             node_tree.add(f"[dim]config:[/dim] {', '.join(config_items[:3])}")
-    
+
     console.print(Panel(tree, expand=False, border_style="bold"))
-    
+
     console.print("\n[dim]💡 Use 'wordcel dag execute' to run this pipeline[/dim]")
 
 
@@ -402,13 +408,11 @@ def dryrun(
 @main.command(cls=RichCommand)
 def interactive():
     """🎮 Launch interactive mode with guided pipeline creation
-    
+
     Starts an interactive session that guides you through creating,
     editing, and running pipelines with helpful prompts and examples.
     """
     start_interactive_mode()
-
-
 
 
 def get_template_content(template: str) -> str:
@@ -508,7 +512,7 @@ nodes:
     type: llm
     template: "Based on this analysis: {input}, provide 3 key business insights."
     input: analyze_trends
-"""
+""",
     }
     return templates.get(template)
 

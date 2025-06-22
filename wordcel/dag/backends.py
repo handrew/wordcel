@@ -129,7 +129,9 @@ class LocalBackend(Backend):
                     if isinstance(data, dict) and data.get("__type__") == "dataframe":
                         data = pd.read_json(StringIO(data["data"]))
                     elif isinstance(data, dict) and data.get("__type__") == "series":
-                        data = pd.read_json(StringIO(data["data"]), typ="series", orient="records")
+                        data = pd.read_json(
+                            StringIO(data["data"]), typ="series", orient="records"
+                        )
 
                 return data
 
