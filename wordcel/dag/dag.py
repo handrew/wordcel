@@ -2,7 +2,6 @@
 import os
 import json
 import logging
-import time
 from string import Template
 import yaml
 import pandas as pd
@@ -15,6 +14,7 @@ from typing import Dict, Any, Type, Callable, Union
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
 from .default_functions import read_sql, llm_filter, llm_call
+from .executors import ExecutorRegistry
 
 log: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -135,6 +135,17 @@ class WordcelDAG:
             self.config = dag_definition
         self.name = self.config["dag"]["name"]
         self.backend_config = self.config["dag"].get("backend", {})
+        
+        # Executor configuration
+        self.executor_config = self.config["dag"].get("executor", {})
+        self.executor_type = self.executor_config.get("type", "parallel")
+        self.max_workers = self.executor_config.get("max_workers", 4)
+        
+        # Legacy support for old configuration format
+        if "max_workers" in self.config["dag"]:
+            self.max_workers = self.config["dag"]["max_workers"]
+        if "enable_parallel" in self.config["dag"]:
+            self.executor_type = "parallel" if self.config["dag"]["enable_parallel"] else "sequential"
 
         # Then load the secrets.
         self.secrets = {}
@@ -320,73 +331,33 @@ class WordcelDAG:
                 f"Node `{node_id}` returned type `{result_type}`, which either is not serializable or contains something, like a DataFrame, that is not serializable."
             )
 
-    def execute(self, input_data: Dict[str, Any] = None, verbose=False) -> Dict[str, Any]:
-        """Execute the DAG.
+    def execute(self, input_data: Dict[str, Any] = None, verbose=False, 
+                executor_type: str = None, console=None, **executor_kwargs) -> Dict[str, Any]:
+        """Execute the DAG using the specified executor.
 
         @param input_data: A dictionary of input data for the nodes. The key
-        is the node ID that the input data is for.
+            is the node ID that the input data is for.
+        @param verbose: Whether to print verbose output during execution.
+        @param executor_type: Override the executor type (e.g., 'parallel', 'sequential').
+        @param console: Console instance to use for output. If None, uses default console.
+        @param executor_kwargs: Additional arguments to pass to the executor.
         """
-        # Sort and execute the nodes.
-        results = {}
-        nodes_list = list(nx.topological_sort(self.graph))
-        total_nodes = len(nodes_list)
-
-        console.print(f"\n🚀 [bold blue]Executing DAG:[/bold blue] [bold]{self.name}[/bold]")
-        console.print(f"📊 [dim]Total nodes: {total_nodes}[/dim]\n")
-
-        for i, node_id in enumerate(nodes_list, 1):
-            node = self.nodes[node_id]
-            node_type = node.__class__.__name__
-            start_time = time.time()
-            
-            # Rich formatted progress
-            console.print(f"[bold cyan]\\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
-
-            try:
-                # Get the incoming edges and their inputs.
-                incoming_input = self.__prepare_incoming_input(input_data, results, node_id)
-                
-                # Check the cache, if we have a backend.
-                if self.backend and self.backend.exists(node_id, incoming_input):
-                    console.print("[yellow]📦 cache[/yellow]", end=" ")
-                    results[node_id] = self.backend.load(node_id, incoming_input)
-                else:
-                    console.print("[blue]⚡ exec[/blue]", end=" ")
-                    results[node_id] = node.execute(incoming_input)
-
-                    # If the node is not a DAG node, check if the result is JSON serializable.
-                    is_dag_node = isinstance(node, NodeRegistry.get("dag"))
-                    if not is_dag_node:
-                        self.__check_result_is_json_serializable(results, node_id)
-
-                    # Don't save DAG nodes to cache, since they may have their own cache.
-                    if self.backend and not is_dag_node:
-                        self.backend.save(node_id, incoming_input, results[node_id])
-
-                elapsed = time.time() - start_time
-                console.print(f"[bold green]✓[/bold green] [green]{elapsed:.2f}s[/green]")
-
-                if verbose:
-                    console.print(f"[dim]Result for {node_id}:[/dim]")
-                    print(results[node_id])
-                    console.print()
-
-            except Exception as e:
-                elapsed = time.time() - start_time
-                console.print(f"[bold red]✗[/bold red] [red]{elapsed:.2f}s[/red]")
-                
-                error_context = {
-                    'node_id': node_id,
-                    'node_type': node_type,
-                    'input_type': type(incoming_input).__name__ if incoming_input is not None else 'None',
-                    'config_keys': list(node.config.keys())
-                }
-                console.print(f"[red]Error:[/red] {e}")
-                console.print(f"[dim]Context: {error_context}[/dim]")
-                raise RuntimeError(f"Node {node_id} ({node_type}) failed: {e}") from e
-
-        console.print(f"\n[bold green]🎉 DAG completed successfully![/bold green] [dim]({total_nodes} nodes)[/dim]")
-        return results
+        # Determine executor type to use
+        exec_type = executor_type or self.executor_type
+        
+        # Create executor with configuration
+        executor_args = {'verbose': verbose}
+        if console:
+            executor_args['console'] = console
+        if exec_type == "parallel":
+            executor_args['max_workers'] = executor_kwargs.get('max_workers', self.max_workers)
+        
+        # Override with any additional kwargs
+        executor_args.update(executor_kwargs)
+        
+        # Create and run executor
+        executor = ExecutorRegistry.create(exec_type, **executor_args)
+        return executor.execute(self, input_data)
 
     def get_node_info(self):
         """Get summary info about all nodes in the DAG."""

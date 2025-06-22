@@ -311,16 +311,14 @@ nodes:
         
         try:
             dag = WordcelDAG(self.test_yaml_path)
-            results = dag.execute()
+            results = dag.execute(console=test_console)
             
             # Get the captured output
             output = output_buffer.getvalue()
             
             # Check for expected timing and progress indicators
-            assert "Executing DAG:" in output
+            assert "Executing DAG" in output  # Works for both "Executing DAG:" and "Executing DAG (Parallel):"
             assert "test_timing" in output
-            assert "[1/2]" in output
-            assert "[2/2]" in output
             assert "load_data" in output
             assert "quick_op" in output
             assert "✓" in output  # Success checkmarks

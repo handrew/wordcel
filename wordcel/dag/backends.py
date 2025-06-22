@@ -3,6 +3,7 @@
 import os
 import hashlib
 import json
+import threading
 import pandas as pd
 from io import StringIO
 from abc import ABC, abstractmethod
@@ -50,6 +51,7 @@ class LocalBackend(Backend):
             raise ValueError("Local backend requires a `cache_dir`.")
         self.cache_dir = cache_dir
         os.makedirs(self.cache_dir, exist_ok=True)
+        self._lock = threading.Lock()
 
     def _get_path(self, key: str) -> str:
         return os.path.join(self.cache_dir, f"{key}.json")
@@ -92,42 +94,44 @@ class LocalBackend(Backend):
 
     def save(self, node_id: str, input_data: Any, data: Any) -> None:
         """Save data or DataFrame to a JSON file."""
-        if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
-            json_str = data.to_json(orient="records")
-            if isinstance(data, pd.DataFrame):
-                data = {"__type__": "dataframe", "data": json_str}
-            elif isinstance(data, pd.Series):
-                data = {"__type__": "series", "data": json_str}
-        elif isinstance(data, list):
-            # If it's a list of DataFrames, convert them to dicts.
-            data = [
-                v.to_json(orient="records") if isinstance(v, pd.DataFrame) else v
-                for v in data
-            ]
-        elif isinstance(data, dict):
-            # If it's a dict of DataFrames, convert them to dicts.
-            data = {
-                k: v.to_json(orient="records") if isinstance(v, pd.DataFrame) else v
-                for k, v in data.items()
-            }
+        with self._lock:
+            if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
+                json_str = data.to_json(orient="records")
+                if isinstance(data, pd.DataFrame):
+                    data = {"__type__": "dataframe", "data": json_str}
+                elif isinstance(data, pd.Series):
+                    data = {"__type__": "series", "data": json_str}
+            elif isinstance(data, list):
+                # If it's a list of DataFrames, convert them to dicts.
+                data = [
+                    v.to_json(orient="records") if isinstance(v, pd.DataFrame) else v
+                    for v in data
+                ]
+            elif isinstance(data, dict):
+                # If it's a dict of DataFrames, convert them to dicts.
+                data = {
+                    k: v.to_json(orient="records") if isinstance(v, pd.DataFrame) else v
+                    for k, v in data.items()
+                }
 
-        cache_key = self.generate_cache_key(node_id, input_data)
-        with open(self._get_path(cache_key), "w") as f:
-            json.dump(data, f, indent=2)
+            cache_key = self.generate_cache_key(node_id, input_data)
+            with open(self._get_path(cache_key), "w") as f:
+                json.dump(data, f, indent=2)
 
     def load(self, node_id: str, input_data: Any) -> Any:
         """Load data or DataFrame from a JSON file."""
-        cache_key = self.generate_cache_key(node_id, input_data)
-        with open(self._get_path(cache_key), "r") as f:
-            data = json.load(f)
-            # Check for the flag indicating a DataFrame.
-            if data is not None:
-                if isinstance(data, dict) and data["__type__"] == "dataframe":
-                    data = pd.read_json(StringIO(data["data"]))
-                elif isinstance(data, dict) and data["__type__"] == "series":
-                    data = pd.read_json(StringIO(data["data"]), typ="series", orient="records")
+        with self._lock:
+            cache_key = self.generate_cache_key(node_id, input_data)
+            with open(self._get_path(cache_key), "r") as f:
+                data = json.load(f)
+                # Check for the flag indicating a DataFrame.
+                if data is not None:
+                    if isinstance(data, dict) and data.get("__type__") == "dataframe":
+                        data = pd.read_json(StringIO(data["data"]))
+                    elif isinstance(data, dict) and data.get("__type__") == "series":
+                        data = pd.read_json(StringIO(data["data"]), typ="series", orient="records")
 
-            return data
+                return data
 
     def exists(self, node_id: str, input_data: Any) -> bool:
         cache_key = self.generate_cache_key(node_id, input_data)
