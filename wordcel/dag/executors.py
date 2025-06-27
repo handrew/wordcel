@@ -1,13 +1,14 @@
 """DAG execution strategies."""
 
 import time
+import logging
 import threading
 from datetime import datetime
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict, deque
 from typing import Dict, Any, TYPE_CHECKING
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, RetryCallState
 from rich.console import Console
 
 if TYPE_CHECKING:
@@ -16,6 +17,15 @@ if TYPE_CHECKING:
 
 # Default console instance
 _default_console = Console()
+log = logging.getLogger(__name__)
+
+
+def log_retry(retry_state: RetryCallState):
+    """Log retry attempts with tenacity."""
+    log.warning(
+        f"Retrying node execution, attempt {retry_state.attempt_number}, waiting {retry_state.next_action.sleep}s. "
+        f"Reason: {retry_state.outcome.exception()}"
+    )
 
 
 class DAGExecutor(ABC):
@@ -110,7 +120,7 @@ class SequentialDAGExecutor(DAGExecutor):
                 model_info = f" | Model: {model}"
             node_timestamp = datetime.now().strftime("%H:%M:%S")
             self.console.print(
-                f"[dim][{node_timestamp}][/dim] [bold cyan]\\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim] ",
+                f"[dim][{node_timestamp}][/dim] [bold cyan]\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim] ",
                 end="",
             )
 
@@ -127,7 +137,11 @@ class SequentialDAGExecutor(DAGExecutor):
                 else:
                     self.console.print("→ [blue]🔄 running[/blue] ", end="")
                     
-                    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+                    @retry(
+                        stop=stop_after_attempt(3),
+                        wait=wait_exponential(multiplier=1, min=4, max=10),
+                        before_sleep=log_retry,
+                    )
                     def _execute_with_retry():
                         return node.execute(incoming_input)
                     
@@ -218,7 +232,11 @@ class ParallelDAGExecutor(DAGExecutor):
                 result = dag.backend.load(node_id, incoming_input)
                 cache_hit = True
             else:
-                @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+                @retry(
+                    stop=stop_after_attempt(3),
+                    wait=wait_exponential(multiplier=1, min=4, max=10),
+                    before_sleep=log_retry,
+                )
                 def _execute_with_retry():
                     return node.execute(incoming_input)
                 
