@@ -321,13 +321,20 @@ class LLMNode(Node):
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
         model = self.config.get("model", DEFAULT_MODEL)
+        web_search_options = self.config.get("web_search_options")
+
         if num_threads > 1:
             log.info(f"Using {num_threads} threads for LLM Node.")
+
+        # Prepare llm_call parameters
+        llm_params = {"model": model}
+        if web_search_options:
+            llm_params["web_search_options"] = web_search_options
 
         # If it's a single string, just call the LLM once.
         if isinstance(input_data, str):
             response = llm_call(
-                self.config["template"].format(input=input_data), model=model
+                self.config["template"].format(input=input_data), **llm_params
             )
             return self._try_to_load_as_json(response)
         # If it is a single dict, call the LLM once.
@@ -339,7 +346,7 @@ class LLMNode(Node):
                 self.config["template"].format(
                     input=input_data[self.config["input_field"]]
                 ),
-                model=model,
+                **llm_params,
             )
             return self._try_to_load_as_json(response)
 
@@ -380,7 +387,7 @@ class LLMNode(Node):
             results = list(
                 executor.map(
                     lambda text: llm_call(
-                        self.config["template"].format(input=text), model=model
+                        self.config["template"].format(input=text), **llm_params
                     ),
                     texts,
                 )
@@ -425,6 +432,11 @@ class LLMNode(Node):
             assert (
                 "output_field" in self.config
             ), "LLMNode must have an `output_field` configuration if `input_field` is present."
+        
+        if "web_search_options" in self.config:
+            assert isinstance(
+                self.config["web_search_options"], dict
+            ), "LLMNode `web_search_options` must be a dictionary."
         return True
 
 

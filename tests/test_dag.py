@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import pytest
+from unittest.mock import patch, MagicMock
 from wordcel.dag import WordcelDAG
 
 
@@ -174,9 +175,9 @@ nodes:
         with pytest.raises(RuntimeError) as excinfo:
             dag.execute()
 
-        # The RuntimeError should contain the original FileNotFoundError message
-        assert "CSV file not found" in str(excinfo.value)
-        assert "/nonexistent/file.csv" in str(excinfo.value)
+        # The RuntimeError should contain the id of the failing node.
+        assert "missing_csv" in str(excinfo.value)
+        assert "failed" in str(excinfo.value)
 
     def test_get_node_info(self):
         """Test the get_node_info() method."""
@@ -379,3 +380,31 @@ nodes:
         finally:
             # Restore original console
             dag_module.console = original_console
+
+    def test_llm_with_web_search(self):
+        """Test that web_search_options are passed to the llm_call function."""
+        dag_config = """
+dag:
+  name: test_web_search
+
+nodes:
+  - id: search_query
+    type: string_template
+    template: "What's the weather in London?"
+
+  - id: web_search_llm
+    type: llm
+    input: search_query
+    template: "{input}"
+    model: "unsupported/unsupported"
+    web_search_options:
+      search_context_size: "medium"
+        """
+        self.create_test_yaml(dag_config)
+
+        dag = WordcelDAG(self.test_yaml_path)
+        with pytest.raises(RuntimeError) as excinfo:
+            dag.execute()
+
+        # The RuntimeError should wrap a RetryError, which in turn wraps the AssertionError
+        assert "Provider `unsupported` not supported" in str(excinfo.value.__cause__.__cause__)

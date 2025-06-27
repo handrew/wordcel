@@ -375,6 +375,7 @@ Optional:
 - `output_field`: The column name (if given a DataFrame or list of DataFrames) or field (if given dicts) to use as output. If DataFrame(s), then the new column will be named `output_field`. 
 - `model`: Which model to use. Supported models can be found in `wordcel.llms`, but is generally limited to OpenAI, Anthropic, Gemini.
 - `num_threads`: Number of threads for parallel processing (default: 1).
+- `web_search_options`: A dictionary of options for web searching. For example: `{"search_context_size": "medium"}`.
 
 Input data:
 - Handles str, list of strings, or pandas DataFrame.
