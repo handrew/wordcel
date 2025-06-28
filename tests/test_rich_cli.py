@@ -115,6 +115,23 @@ class TestRichCLI:
         # Should contain some common node types
         assert "csv" in result.output.lower() or "llm" in result.output.lower()
 
+    def test_describe_node_command(self):
+        """Test the new 'dag describe' command."""
+        # Test with a valid node type
+        result = self.runner.invoke(main, ["dag", "describe", "csv"])
+        assert result.exit_code == 0
+        assert "Node Type: csv" in result.output
+        assert "Description" in result.output
+        assert "Node to read a CSV file." in result.output
+        assert "Input Specification" in result.output
+        assert "None" in result.output
+        assert "Does not accept input" in result.output
+
+        # Test with an invalid node type
+        result = self.runner.invoke(main, ["dag", "describe", "non_existent_node"])
+        assert result.exit_code == 0
+        assert "Node type 'non_existent_node' not found." in result.output
+
     @patch("wordcel.cli.initialize_dag")
     def test_visualize_command_success(self, mock_initialize_dag):
         """Test visualize command with rich output."""

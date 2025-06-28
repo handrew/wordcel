@@ -356,6 +356,35 @@ class WordcelDAG:
 
         return incoming_input
 
+    def _validate_node_input(self, node_id: str, incoming_input: Any):
+        """Validate the input for a node against its spec."""
+        node = self.nodes[node_id]
+        spec = node.input_spec
+
+        # If there's no spec, there's nothing to validate.
+        if not spec:
+            return
+
+        expected_type = spec.get("type")
+        # `object` is a wildcard that accepts any type.
+        if expected_type == object:
+            return
+
+        if expected_type is None:
+            if incoming_input is not None:
+                raise TypeError(
+                    f"Node '{node_id}' expected no input, but received an input of type {type(incoming_input).__name__}. "
+                    f"Node description: {spec.get('description')}"
+                )
+            return
+
+        if not isinstance(incoming_input, expected_type):
+            raise TypeError(
+                f"Node '{node_id}' received an invalid input type. "
+                f"Expected {expected_type}, but got {type(incoming_input).__name__}. "
+                f"Node description: {spec.get('description')}"
+            )
+
     def __check_result_is_json_serializable(self, results, node_id: str):
         if not _is_json_serializable(results[node_id]):
             result_type = type(results[node_id]).__name__

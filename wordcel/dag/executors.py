@@ -8,12 +8,15 @@ from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict, deque
 from typing import Dict, Any, TYPE_CHECKING
-from tenacity import retry, stop_after_attempt, wait_exponential, RetryCallState
+from tenacity import retry, stop_after_attempt, wait_exponential, RetryCallState, retry_if_exception_type
 from rich.console import Console
 
 if TYPE_CHECKING:
     from .dag import WordcelDAG
     from .nodes import Node
+
+# Define retryable exceptions
+RETRYABLE_EXCEPTIONS = (IOError, ConnectionError)
 
 # Default console instance
 _default_console = Console()
@@ -129,6 +132,7 @@ class SequentialDAGExecutor(DAGExecutor):
                 incoming_input = self._prepare_incoming_input(
                     dag, input_data, results, node_id
                 )
+                dag._validate_node_input(node_id, incoming_input)
 
                 # Check the cache, if we have a backend.
                 if dag.backend and dag.backend.exists(node_id, incoming_input):
@@ -224,6 +228,7 @@ class ParallelDAGExecutor(DAGExecutor):
                 incoming_input = self._prepare_incoming_input(
                     dag, input_data, results, node_id
                 )
+            dag._validate_node_input(node_id, incoming_input)
 
             # Check cache if we have a backend
             result = None

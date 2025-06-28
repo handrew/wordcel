@@ -1,9 +1,15 @@
 from wordcel.dag import Node
 from typing import Union
+import pandas as pd
 
 
 class MultiplyNode(Node):
-    def execute(self, input_data: Union[int, float]) -> Union[int, float]:
+    input_spec = {
+        "type": (int, float, pd.DataFrame),
+        "description": "Accepts a number or a pandas DataFrame to multiply by a factor.",
+    }
+
+    def execute(self, input_data: Union[int, float, pd.DataFrame]) -> Union[int, float, pd.DataFrame]:
         factor = self.config.get("factor", 1)
         return input_data * factor
 

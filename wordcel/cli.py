@@ -191,6 +191,71 @@ def list_node_types():
     console.print(table)
 
 
+@dag.command(cls=RichCommand, name="describe")
+@click.argument("node_type")
+def describe_node(node_type):
+    """🔎 Show detailed information about a specific node type
+
+    Displays the node's description, input specification, and configuration
+    parameters to help with pipeline creation.
+    """
+    from wordcel.dag.nodes import NodeRegistry
+    from rich.panel import Panel
+    from rich.text import Text
+
+    NodeRegistry.register_default_nodes()
+    node_class = NodeRegistry.get(node_type)
+
+    if not node_class:
+        console.print(f"[red]✗[/red] Node type '{node_type}' not found.")
+        console.print("Use 'wordcel dag list-node-types' to see all available types.")
+        return
+
+    # --- Basic Info ---
+    console.print(f"\n[bold cyan]Node Type: {node_type}[/bold cyan]")
+    description = getattr(node_class, "description", "No description available.")
+    console.print(Panel(description, title="Description", border_style="green"))
+
+    # --- Input Spec ---
+    spec = getattr(node_class, "input_spec", {})
+    spec_type = spec.get("type", "Any")
+    spec_desc = spec.get("description", "Not specified.")
+
+    if spec_type is None:
+        spec_type_str = "[bold]None[/bold] (Does not accept input)"
+    elif spec_type == object:
+        spec_type_str = "[bold]Any[/bold]"
+    else:
+        if isinstance(spec_type, (list, tuple)):
+            spec_type_str = ", ".join(
+                f"[bold]{t.__name__}[/bold]" for t in spec_type
+            )
+        else:
+            spec_type_str = f"[bold]{spec_type.__name__}[/bold]"
+
+    spec_panel = Text.assemble(
+        ("Expected Type: ", "bold"),
+        (spec_type_str, "yellow"),
+        "\n\n",
+        (spec_desc, "dim"),
+    )
+    console.print(
+        Panel(spec_panel, title="Input Specification", border_style="yellow")
+    )
+
+    # --- Configuration ---
+    # This part is more complex as it requires inspecting the __init__ or a config schema
+    # For now, we'll add a placeholder.
+    # TODO: Implement a more robust way to get config parameters.
+    console.print(
+        Panel(
+            "Configuration parameters are defined in the node's `validate_config` method. Inspect the node's source code for details.",
+            title="Configuration",
+            border_style="blue",
+        )
+    )
+
+
 @dag.command()
 @click.argument("pipeline_file")
 @click.argument("save_path")

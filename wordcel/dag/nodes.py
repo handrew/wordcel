@@ -23,6 +23,11 @@ log = get_logger("dag.nodes")
 
 
 class Node(ABC):
+    input_spec: Dict[str, Any] = {
+        "type": None,
+        "description": "This node does not take any input.",
+    }
+
     def __init__(
         self,
         config: Dict[str, Any],
@@ -59,6 +64,7 @@ class Node(ABC):
 
 class CSVNode(Node):
     description = """Node to read a CSV file."""
+    input_spec = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         path = os.path.expanduser(self.config["path"])
@@ -73,6 +79,7 @@ class CSVNode(Node):
 
 class YAMLNode(Node):
     description = """Node to read a YAML file."""
+    input_spec = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
         path = os.path.expanduser(self.config["path"])
@@ -88,6 +95,7 @@ class YAMLNode(Node):
 
 class JSONNode(Node):
     description = """Node to read a JSON file."""
+    input_spec = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
         path = os.path.expanduser(self.config["path"])
@@ -103,6 +111,7 @@ class JSONNode(Node):
 
 class JSONDataFrameNode(Node):
     description = """Node to read a JSON file into a pandas DataFrame."""
+    input_spec = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         path = os.path.expanduser(self.config["path"])
@@ -119,6 +128,10 @@ class JSONDataFrameNode(Node):
 
 class FileDirectoryNode(Node):
     description = """Node to read text and markdown files from a directory or list of directories, supporting regex patterns."""
+    input_spec = {
+        "type": (dict, type(None)),
+        "description": "Optionally accepts a dictionary with a 'path' key (string or list of strings) to override the path in the config.",
+    }
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         paths = self.config.get("path")
@@ -167,6 +180,7 @@ class FileDirectoryNode(Node):
 
 class SQLNode(Node):
     description = """Node to execute a SQL query."""
+    input_spec = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         connection_string = self.secrets["database_url"]
@@ -184,12 +198,20 @@ class StringTemplateNode(Node):
     description = """Node to apply a string template to input data. The
     `header`, if given, is placed at the top. The `template` is filled in
     at least once, and potentially many times depending on the input."""
+    input_spec = {
+        "type": (dict, list, pd.DataFrame, str, type(None)),
+        "description": "Accepts a dictionary for direct template substitution, or a list/DataFrame to iterate over. If a string is provided, it's substituted for '{input}'. Can also be run with no input.",
+    }
 
     def execute(
         self, input_data: Union[Dict[str, Any], List[Dict[str, Any]], pd.DataFrame]
     ) -> Union[str, List[str]]:
         template = Template(self.config["template"])
         mode = self.config.get("mode", "single")
+
+        # If multiple inputs are defined in the DAG, map them to a dict by node ID.
+        if isinstance(self.config.get("input"), list) and isinstance(input_data, list):
+            input_data = dict(zip(self.config["input"], input_data))
 
         return_string = self.config.get("header", "")
         if return_string:
@@ -231,6 +253,7 @@ class StringTemplateNode(Node):
 
         return return_string
 
+
     def validate_config(self) -> bool:
         assert (
             "template" in self.config
@@ -245,6 +268,10 @@ class StringTemplateNode(Node):
 
 class StringConcatNode(Node):
     description = """Node to concatenate strings from multiple inputs with optional separator and prefix/suffix."""
+    input_spec = {
+        "type": (str, list, pd.DataFrame, pd.Series),
+        "description": "Accepts a string, a list of strings, or a pandas DataFrame/Series to concatenate.",
+    }
 
     def execute(
         self, input_data: Union[str, List[str], pd.DataFrame, pd.Series]
@@ -299,6 +326,10 @@ class LLMNode(Node):
     it will fill in the template and return the result. If given a DataFrame
     or list of dicts, it will turn the column / field denoted by `input_field`
     into a list of strings, fill in the template for each string."""
+    input_spec = {
+        "type": (str, list, pd.DataFrame, pd.Series, dict),
+        "description": "Accepts a string, list of strings, dict, or a pandas DataFrame/Series. The 'input_field' config is required for structured data (dict, DataFrame).",
+    }
 
     def _try_to_load_as_json(self, text: str) -> Union[str, dict]:
         """Attempt to parse text as JSON, returning original text if parsing fails.
@@ -442,10 +473,12 @@ class LLMNode(Node):
 
 class LLMFilterNode(Node):
     description = """Node to use LLMs to filter a dataframe."""
+    input_spec = {
+        "type": pd.DataFrame,
+        "description": "Requires a pandas DataFrame as input.",
+    }
 
     def execute(self, input_data: pd.DataFrame) -> Union[pd.DataFrame, pd.Series]:
-        is_dataframe = isinstance(input_data, pd.DataFrame)
-        assert is_dataframe, "LLMFilterNode must have a DataFrame as input."
         model = self.config.get("model", DEFAULT_MODEL)
         num_threads = self.config.get("num_threads", 1)
         assert num_threads >= 1, "Number of threads must be at least 1."
@@ -476,6 +509,10 @@ class LLMFilterNode(Node):
 
 class FileWriterNode(Node):
     description = """Node to write data to a file."""
+    input_spec = {
+        "type": (str, list),
+        "description": "Accepts a string to write to a single file, or a list of strings to write to multiple files (in 'multiple' mode).",
+    }
 
     def execute(self, input_data: str) -> str:
         mode = self.config.get("mode", "single")
@@ -506,6 +543,10 @@ class FileWriterNode(Node):
 
 class DataFrameOperationNode(Node):
     description = """Node to apply a DataFrame operation to the input data."""
+    input_spec = {
+        "type": (pd.DataFrame, list),
+        "description": "Accepts a single DataFrame or a list of DataFrames for operations like 'concat' or 'merge'.",
+    }
 
     def execute(self, input_data: Union[pd.DataFrame, List]) -> pd.DataFrame:
         if not isinstance(input_data, list):
@@ -585,10 +626,16 @@ class DataFrameOperationNode(Node):
 
 class PythonScriptNode(Node):
     description = """Node to execute a Python script using subprocess."""
+    input_spec = {
+        "type": (str, int, float, complex, bool, list, pd.Series, pd.DataFrame, type(None)),
+        "description": "Accepts a primitive type, a list, a pandas Series, or a pandas DataFrame to be passed as a command-line argument to the script. Can also be run with no input.",
+    }
 
     def execute(self, input_data: Any) -> Any:
         if input_data is not None:
-            if isinstance(input_data, pd.Series):
+            if isinstance(input_data, pd.DataFrame):
+                input_data = input_data.to_records(index=False).tolist()
+            elif isinstance(input_data, pd.Series):
                 input_data = input_data.tolist()
             elif isinstance(input_data, (str, int, float, complex, bool)):
                 input_data = [input_data]
@@ -596,7 +643,7 @@ class PythonScriptNode(Node):
                 input_data = input_data
             else:
                 raise ValueError(
-                    "Input data must be a primitive, list, or pandas Series."
+                    "Input data must be a primitive, list, pandas Series, or pandas DataFrame."
                 )
         else:
             # None if no input data, so that it runs once and appends
@@ -688,6 +735,10 @@ class PythonFunctionNode(Node):
     - 'multiple': iterates through input data (list, Series, DataFrame column) and calls function for each item
     
     Function path should be in the format: package.module.function_name or local.module.function_name."""
+    input_spec = {
+        "type": (str, int, float, complex, bool, list, dict, pd.DataFrame, pd.Series, type(None)),
+        "description": "Accepts various data types. The data is passed as an argument to the specified function. Behavior is controlled by 'mode' and 'input_kwarg'.",
+    }
 
     def execute(self, input_data: Any) -> Any:
         # Get the function using the dotted path
@@ -798,8 +849,12 @@ class PythonFunctionNode(Node):
 
 class DAGNode(Node):
     description = """Node to execute a sub-DAG defined in a YAML file."""
+    input_spec = {
+        "type": (dict, pd.DataFrame, type(None)),
+        "description": "Accepts a dictionary where keys are node IDs in the sub-DAG to receive input, or a DataFrame. Can also be run with no input.",
+    }
 
-    def execute(self, input_data: Dict[str, Any]) -> Any:
+    def execute(self, input_data: Union[Dict[str, Any], pd.DataFrame]) -> Any:
         from .dag import WordcelDAG
 
         # Ensure that the custom_functions don't override the default

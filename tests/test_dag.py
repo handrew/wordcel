@@ -61,10 +61,15 @@ nodes:
     output_field: "Cuisine"
     num_threads: 2
 
+  - id: format_output
+    type: string_template
+    input: process_filtered
+    template: "${Cuisine}"
+
   - id: save_results
     type: file_writer
     path: "test_output.txt"
-    input: process_filtered
+    input: format_output
         """
         self.create_test_yaml(dag_config)
 
@@ -99,10 +104,15 @@ nodes:
       - countries_data
       - mtcars_data
 
+  - id: format_output
+    type: string_template
+    input: combine_data
+    template: "${__str__}"
+
   - id: output
     type: file_writer
     path: test_combined_output.csv
-    input: combine_data
+    input: format_output
         """
         self.create_test_yaml(dag_config)
 
@@ -408,3 +418,80 @@ nodes:
 
         # The RuntimeError should wrap a RetryError, which in turn wraps the AssertionError
         assert "Provider `unsupported` not supported" in str(excinfo.value.__cause__.__cause__)
+
+    def test_string_template_node_with_multiple_inputs(self):
+        """Test that StringTemplateNode can handle multiple named inputs."""
+        dag_config = """
+dag:
+  name: test_string_template_multiple_inputs
+
+nodes:
+  - id: get_name
+    type: yaml
+    path: "name.yaml"
+
+  - id: get_place
+    type: yaml
+    path: "place.yaml"
+
+  - id: make_greeting
+    type: string_template
+    input:
+      - get_name
+      - get_place
+    template: "Hello ${get_name}, welcome to ${get_place}."
+"""
+        self.create_test_yaml(dag_config)
+        with open("name.yaml", "w") as f:
+            f.write('"World"')
+        with open("place.yaml", "w") as f:
+            f.write('"the Machine"')
+
+        dag = WordcelDAG(self.test_yaml_path)
+        results = dag.execute()
+
+        assert "make_greeting" in results
+        assert results["make_greeting"] == "Hello World, welcome to the Machine."
+
+        # Clean up the extra files
+        if os.path.exists("name.yaml"):
+            os.remove("name.yaml")
+        if os.path.exists("place.yaml"):
+            os.remove("place.yaml")
+
+    def test_input_spec_validation(self):
+        """Test that the DAG validates node inputs against their spec."""
+        dag_config = """
+dag:
+  name: test_input_spec_validation
+
+nodes:
+  - id: string_producer
+    type: yaml
+    path: "input.yaml"
+
+  - id: dataframe_consumer
+    type: llm_filter
+    input: string_producer
+    column: "some_column"
+    prompt: "some_prompt"
+        """
+        self.create_test_yaml(dag_config)
+        with open("input.yaml", "w") as f:
+            f.write('"this is just a string"')
+
+        dag = WordcelDAG(self.test_yaml_path)
+
+        with pytest.raises(RuntimeError) as excinfo:
+            dag.execute()
+
+        # Check that the error message is from our new validation logic
+        assert "failed" in str(excinfo.value)
+        assert "dataframe_consumer" in str(excinfo.value)
+        assert "invalid input type" in str(excinfo.value)
+        assert "Expected <class 'pandas.core.frame.DataFrame'>" in str(excinfo.value)
+        assert "got str" in str(excinfo.value)
+
+        # Clean up the extra file
+        if os.path.exists("input.yaml"):
+            os.remove("input.yaml")

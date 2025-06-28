@@ -40,9 +40,13 @@ nodes:
   - id: sub_dag
     type: dag
     path: {sub_dag_path}
+  - id: format_output
+    type: string_template
+    input: sub_dag
+    template: "${{llm_node}}"
   - id: file_writer
     type: file_writer
-    input: sub_dag
+    input: format_output
     path: output.txt
 """
 
