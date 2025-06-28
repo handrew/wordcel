@@ -235,7 +235,7 @@ def describe_node(node_type):
 
     spec_panel = Text.assemble(
         ("Expected Type: ", "bold"),
-        (spec_type_str, "yellow"),
+        Text.from_markup(f"[yellow]{spec_type_str}[/yellow]"),
         "\n\n",
         (spec_desc, "dim"),
     )
