@@ -1,23 +1,30 @@
 """DAG definition and node implementations."""
+
 import os
 import json
-import logging
-import time
 from string import Template
+from datetime import datetime
 import yaml
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 from rich import print
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-from typing import Dict, Any, Type, Callable, Union
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TimeElapsedColumn,
+)
+from typing import Dict, Any, Type, Callable, Union, Optional
 from .nodes import Node, NodeRegistry
 from .backends import Backend, BackendRegistry
 from .default_functions import read_sql, llm_filter, llm_call
+from .executors import ExecutorRegistry
+from ..logging_config import get_logger
 
-log: logging.Logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+log = get_logger("dag.dag")
 
 console = Console()
 
@@ -25,9 +32,23 @@ console = Console()
 def create_node(
     node_config: Dict[str, Any],
     secrets: Dict[str, str],
-    runtime_config_params: Dict[str, str] = None,
-    custom_functions: Dict[str, Callable] = None,
+    runtime_config_params: Optional[Dict[str, str]] = None,
+    custom_functions: Optional[Dict[str, Callable]] = None,
 ) -> Node:
+    """Create a node instance from configuration.
+
+    Args:
+        node_config: Configuration dictionary for the node
+        secrets: Dictionary of secret values
+        runtime_config_params: Runtime configuration parameters
+        custom_functions: Dictionary of custom functions to inject
+
+    Returns:
+        Instantiated and validated node
+
+    Raises:
+        ValueError: If node type is unknown or invalid
+    """
     node_type = node_config.get("type")
     node_class = NodeRegistry.get(node_type)
     if node_class is None:
@@ -39,15 +60,21 @@ def create_node(
         node_config,
         secrets,
         runtime_config_params=runtime_config_params,
-        custom_functions=custom_functions
+        custom_functions=custom_functions,
     )
     node.validate_config()
     return node
 
 
 def _is_json_serializable(data: Any) -> bool:
-    """Check if the data is JSON serializable, or is a DataFrame which
-    is JSON serializable."""
+    """Check if the data is JSON serializable, or is a DataFrame which is JSON serializable.
+
+    Args:
+        data: The data to check for JSON serializability
+
+    Returns:
+        True if data can be serialized to JSON, False otherwise
+    """
     try:
         if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
             data.to_json(orient="records")
@@ -79,9 +106,12 @@ def _is_json_serializable(data: Any) -> bool:
 
 """DAG definition."""
 
+
 def _assert_dag_param_is_valid(dag_definition):
     """Assert that the DAG definition is valid."""
-    assert isinstance(dag_definition, (str, dict)), "DAG definition must be a string or dictionary."
+    assert isinstance(
+        dag_definition, (str, dict)
+    ), "DAG definition must be a string or dictionary."
     if isinstance(dag_definition, str):
         assert os.path.exists(
             os.path.expanduser(dag_definition)
@@ -135,6 +165,19 @@ class WordcelDAG:
             self.config = dag_definition
         self.name = self.config["dag"]["name"]
         self.backend_config = self.config["dag"].get("backend", {})
+
+        # Executor configuration
+        self.executor_config = self.config["dag"].get("executor", {})
+        self.executor_type = self.executor_config.get("type", "parallel")
+        self.max_workers = self.executor_config.get("max_workers", 4)
+
+        # Legacy support for old configuration format
+        if "max_workers" in self.config["dag"]:
+            self.max_workers = self.config["dag"]["max_workers"]
+        if "enable_parallel" in self.config["dag"]:
+            self.executor_type = (
+                "parallel" if self.config["dag"]["enable_parallel"] else "sequential"
+            )
 
         # Then load the secrets.
         self.secrets = {}
@@ -195,7 +238,6 @@ class WordcelDAG:
             return result
         else:
             raise ValueError(f"Unknown file type: {yaml_file}")
-    
 
     @staticmethod
     def load_secrets(secrets) -> Dict[str, str]:
@@ -206,15 +248,13 @@ class WordcelDAG:
         if isinstance(secrets, str):
             assert os.path.exists(
                 os.path.expanduser(secrets)
-            ), f"Secrets file `{secrets}` does not exist."  
-            assert secrets.endswith(    
-                ".yaml"
-            ), "Secrets file must be a YAML file."  
+            ), f"Secrets file `{secrets}` does not exist."
+            assert secrets.endswith(".yaml"), "Secrets file must be a YAML file."
 
         # If it's a dict, return it.
         if isinstance(secrets, dict):
             return secrets
-        
+
         # Load the YAML file.
         return WordcelDAG.load_yaml(secrets)
 
@@ -288,18 +328,21 @@ class WordcelDAG:
                     node_config,
                     self.secrets,
                     runtime_config_params=self.runtime_config_params,
-                    custom_functions=self.default_functions
+                    custom_functions=self.default_functions,
                 )
             except ValueError as e:
                 raise ValueError(f"Error creating node {node_id}: {str(e)}")
         return nodes
 
-
     def __prepare_incoming_input(self, input_data, results, node_id: str):
         """Prepare the incoming input for a node."""
         incoming_edges = self.graph.nodes[node_id].get("input")
         incoming_input = None
-        if input_data is not None and isinstance(input_data, dict) and node_id in input_data:
+        if (
+            input_data is not None
+            and isinstance(input_data, dict)
+            and node_id in input_data
+        ):
             # First check if the input data is given at runtime.
             # If so, we don't need to look at the incoming edges.
             assert (
@@ -312,7 +355,36 @@ class WordcelDAG:
             incoming_input = results.get(incoming_edges)
 
         return incoming_input
-    
+
+    def _validate_node_input(self, node_id: str, incoming_input: Any):
+        """Validate the input for a node against its spec."""
+        node = self.nodes[node_id]
+        spec = node.input_spec
+
+        # If there's no spec, there's nothing to validate.
+        if not spec:
+            return
+
+        expected_type = spec.get("type")
+        # `object` is a wildcard that accepts any type.
+        if expected_type == object:
+            return
+
+        if expected_type is None:
+            if incoming_input is not None:
+                raise TypeError(
+                    f"Node '{node_id}' expected no input, but received an input of type {type(incoming_input).__name__}. "
+                    f"Node description: {spec.get('description')}"
+                )
+            return
+
+        if not isinstance(incoming_input, expected_type):
+            raise TypeError(
+                f"Node '{node_id}' received an invalid input type. "
+                f"Expected {expected_type}, but got {type(incoming_input).__name__}. "
+                f"Node description: {spec.get('description')}"
+            )
+
     def __check_result_is_json_serializable(self, results, node_id: str):
         if not _is_json_serializable(results[node_id]):
             result_type = type(results[node_id]).__name__
@@ -320,73 +392,41 @@ class WordcelDAG:
                 f"Node `{node_id}` returned type `{result_type}`, which either is not serializable or contains something, like a DataFrame, that is not serializable."
             )
 
-    def execute(self, input_data: Dict[str, Any] = None, verbose=False) -> Dict[str, Any]:
-        """Execute the DAG.
+    def execute(
+        self,
+        input_data: Dict[str, Any] = None,
+        verbose=False,
+        executor_type: str = None,
+        console=None,
+        **executor_kwargs,
+    ) -> Dict[str, Any]:
+        """Execute the DAG using the specified executor.
 
         @param input_data: A dictionary of input data for the nodes. The key
-        is the node ID that the input data is for.
+            is the node ID that the input data is for.
+        @param verbose: Whether to print verbose output during execution.
+        @param executor_type: Override the executor type (e.g., 'parallel', 'sequential').
+        @param console: Console instance to use for output. If None, uses default console.
+        @param executor_kwargs: Additional arguments to pass to the executor.
         """
-        # Sort and execute the nodes.
-        results = {}
-        nodes_list = list(nx.topological_sort(self.graph))
-        total_nodes = len(nodes_list)
+        # Determine executor type to use
+        exec_type = executor_type or self.executor_type
 
-        console.print(f"\n🚀 [bold blue]Executing DAG:[/bold blue] [bold]{self.name}[/bold]")
-        console.print(f"📊 [dim]Total nodes: {total_nodes}[/dim]\n")
+        # Create executor with configuration
+        executor_args = {"verbose": verbose}
+        if console:
+            executor_args["console"] = console
+        if exec_type == "parallel":
+            executor_args["max_workers"] = executor_kwargs.get(
+                "max_workers", self.max_workers
+            )
 
-        for i, node_id in enumerate(nodes_list, 1):
-            node = self.nodes[node_id]
-            node_type = node.__class__.__name__
-            start_time = time.time()
-            
-            # Rich formatted progress
-            console.print(f"[bold cyan]\\[{i}/{total_nodes}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
+        # Override with any additional kwargs
+        executor_args.update(executor_kwargs)
 
-            try:
-                # Get the incoming edges and their inputs.
-                incoming_input = self.__prepare_incoming_input(input_data, results, node_id)
-                
-                # Check the cache, if we have a backend.
-                if self.backend and self.backend.exists(node_id, incoming_input):
-                    console.print("[yellow]📦 cache[/yellow]", end=" ")
-                    results[node_id] = self.backend.load(node_id, incoming_input)
-                else:
-                    console.print("[blue]⚡ exec[/blue]", end=" ")
-                    results[node_id] = node.execute(incoming_input)
-
-                    # If the node is not a DAG node, check if the result is JSON serializable.
-                    is_dag_node = isinstance(node, NodeRegistry.get("dag"))
-                    if not is_dag_node:
-                        self.__check_result_is_json_serializable(results, node_id)
-
-                    # Don't save DAG nodes to cache, since they may have their own cache.
-                    if self.backend and not is_dag_node:
-                        self.backend.save(node_id, incoming_input, results[node_id])
-
-                elapsed = time.time() - start_time
-                console.print(f"[bold green]✓[/bold green] [green]{elapsed:.2f}s[/green]")
-
-                if verbose:
-                    console.print(f"[dim]Result for {node_id}:[/dim]")
-                    print(results[node_id])
-                    console.print()
-
-            except Exception as e:
-                elapsed = time.time() - start_time
-                console.print(f"[bold red]✗[/bold red] [red]{elapsed:.2f}s[/red]")
-                
-                error_context = {
-                    'node_id': node_id,
-                    'node_type': node_type,
-                    'input_type': type(incoming_input).__name__ if incoming_input is not None else 'None',
-                    'config_keys': list(node.config.keys())
-                }
-                console.print(f"[red]Error:[/red] {e}")
-                console.print(f"[dim]Context: {error_context}[/dim]")
-                raise RuntimeError(f"Node {node_id} ({node_type}) failed: {e}") from e
-
-        console.print(f"\n[bold green]🎉 DAG completed successfully![/bold green] [dim]({total_nodes} nodes)[/dim]")
-        return results
+        # Create and run executor
+        executor = ExecutorRegistry.create(exec_type, **executor_args)
+        return executor.execute(self, input_data)
 
     def get_node_info(self):
         """Get summary info about all nodes in the DAG."""
@@ -394,35 +434,53 @@ class WordcelDAG:
         for node_id in nx.topological_sort(self.graph):
             node = self.nodes[node_id]
             predecessors = list(self.graph.predecessors(node_id))
-            info.append({
-                'id': node_id,
-                'type': node.__class__.__name__,
-                'config_keys': list(node.config.keys()),
-                'inputs': predecessors if predecessors else None
-            })
+            info.append(
+                {
+                    "id": node_id,
+                    "type": node.__class__.__name__,
+                    "config_keys": list(node.config.keys()),
+                    "inputs": predecessors if predecessors else None,
+                }
+            )
         return info
+
+    def get_execution_order(self):
+        """Get the execution order of nodes in the DAG."""
+        return list(nx.topological_sort(self.graph))
 
     def dry_run(self):
         """Validate DAG configuration without executing nodes."""
-        console.print(f"\n🔍 [bold blue]Running DAG validation:[/bold blue] [bold]{self.name}[/bold]")
+        start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        console.print(
+            f"\n🔍 [bold blue]Running DAG validation:[/bold blue] [bold]{self.name}[/bold] [dim]({start_timestamp})[/dim]"
+        )
         console.print(f"📊 [dim]Total nodes: {len(self.nodes)}[/dim]\n")
-        
+
         issues = []
         nodes_list = list(nx.topological_sort(self.graph))
-        
+
         for i, node_id in enumerate(nodes_list, 1):
             node = self.nodes[node_id]
             node_type = node.__class__.__name__
-            
-            console.print(f"[bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type})[/dim]", end=" ")
-            
+
+            # Add model info if available
+            model_info = ""
+            if hasattr(node, "config") and "model" in node.config:
+                model_info = f" | Model: {node.config['model']}"
+
+            node_timestamp = datetime.now().strftime("%H:%M:%S")
+            console.print(
+                f"[dim][{node_timestamp}][/dim] [bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim]",
+                end=" ",
+            )
+
             try:
                 node.validate_config()
                 console.print("[bold green]✓[/bold green]")
             except Exception as e:
                 issues.append(f"{node_id}: {e}")
                 console.print(f"[bold red]✗[/bold red] [red]{e}[/red]")
-        
+
         console.print()
         if issues:
             console.print(f"[red]❌ Found {len(issues)} validation issues:[/red]")
@@ -430,5 +488,7 @@ class WordcelDAG:
                 console.print(f"   [red]• {issue}[/red]")
             return False
         else:
-            console.print("[bold green]✅ DAG validation passed! All nodes configured correctly.[/bold green]")
+            console.print(
+                "[bold green]✅ DAG validation passed! All nodes configured correctly.[/bold green]"
+            )
             return True

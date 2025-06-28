@@ -296,14 +296,26 @@ Optional:
 - mode: "single" or "multiple". Default "single". If single, then it repeats the template for each item. If multiple, then it returns a list.
 
 Input data:
-- Expects input_data to be None, a dictionary, DataFrame, or a list of dictionaries. If None, you're just passing a string.
+- If the `input` parameter in the YAML is a list of node IDs, the node will automatically receive a dictionary mapping those node IDs to their results. This allows you to reference inputs by their node ID in the template (e.g., `${node_id}`).
+- If the `input` is a single node ID that produces a list or DataFrame, the node will iterate over that data, applying the template to each item (based on the `mode`).
+- If the input is a single node ID that produces a dictionary, it will be used for a single template substitution.
 
 ```yaml
-- id: format_string
+# Example with multiple inputs mapped by ID
+- id: format_greeting
   type: string_template
-  header: "# Header that is printed once"
-  template: "Hello, ${name}! You are ${age} years old."
-  input: previous_node_id
+  template: "Hello, ${name_node}! Welcome to ${place_node}."
+  input:
+    - name_node
+    - place_node
+```
+
+```yaml
+# Example with a single input containing a list of data
+- id: format_list
+  type: string_template
+  template: "Item: ${item_name}"
+  input: list_producing_node
 ```
 
 
@@ -375,6 +387,7 @@ Optional:
 - `output_field`: The column name (if given a DataFrame or list of DataFrames) or field (if given dicts) to use as output. If DataFrame(s), then the new column will be named `output_field`. 
 - `model`: Which model to use. Supported models can be found in `wordcel.llms`, but is generally limited to OpenAI, Anthropic, Gemini.
 - `num_threads`: Number of threads for parallel processing (default: 1).
+- `web_search_options`: A dictionary of options for web searching. For example: `{"search_context_size": "medium"}`.
 
 Input data:
 - Handles str, list of strings, or pandas DataFrame.

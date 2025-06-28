@@ -1,5 +1,6 @@
 from wordcel.dag.nodes import Node
 
+
 class ReverseStringNode(Node):
     description = "Node to reverse a string"
 
@@ -8,4 +9,3 @@ class ReverseStringNode(Node):
 
     def validate_config(self) -> bool:
         return True
-

@@ -79,11 +79,11 @@ def test_load_and_retrieve():
     # Ensure we have a saved retriever first
     if not os.path.exists("retriever.pkl"):
         test_indexing_and_save()
-    
+
     retriever = ContextualRetrieval.from_saved("retriever.pkl")
     result = retriever.retrieve("what genus is a capybara?")
     assert result is not None
-    
+
     generated = retriever.generate("what genus is a capybara?")
     assert generated is not None
     assert len(generated) > 0
@@ -97,9 +97,9 @@ def cleanup_test_files():
     for file_path in test_files:
         if os.path.exists(file_path):
             os.remove(file_path)
-    
+
     yield
-    
+
     # Clean up after test
     for file_path in test_files:
         if os.path.exists(file_path):

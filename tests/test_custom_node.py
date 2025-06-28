@@ -1,9 +1,15 @@
 from wordcel.dag import Node
 from typing import Union
+import pandas as pd
 
 
 class MultiplyNode(Node):
-    def execute(self, input_data: Union[int, float]) -> Union[int, float]:
+    input_spec = {
+        "type": (int, float, pd.DataFrame),
+        "description": "Accepts a number or a pandas DataFrame to multiply by a factor.",
+    }
+
+    def execute(self, input_data: Union[int, float, pd.DataFrame]) -> Union[int, float, pd.DataFrame]:
         factor = self.config.get("factor", 1)
         return input_data * factor
 
@@ -88,7 +94,9 @@ class TestMultiplyNodeAndDAG(unittest.TestCase):
         # Mock the necessary components
         mock_csv_data = pd.DataFrame({"value": [1, 2, 3]})
 
-        with patch("pandas.read_csv", return_value=mock_csv_data):
+        with patch("pandas.read_csv", return_value=mock_csv_data), patch(
+            "os.path.exists", return_value=True
+        ):
             # Create and execute the DAG
             dag = WordcelDAG(temp_file_path, custom_nodes={"multiply": MultiplyNode})
             results = dag.execute()

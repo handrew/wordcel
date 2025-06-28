@@ -1,5 +1,6 @@
 from wordcel.dag.nodes import Node
 
+
 class UppercaseNode(Node):
     description = "Node to convert text to uppercase"
 
@@ -8,4 +9,3 @@ class UppercaseNode(Node):
 
     def validate_config(self) -> bool:
         return True
-
