@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wordcel"
-version = "0.4.0"
+version = "0.4.1"
 description = "Swiss army-knife for composing LLM outputs"
 authors = ["Andrew Han <handrew11@gmail.com>"]
 readme = "README.md"
@@ -14,6 +14,7 @@ langchain = ">0.3.0"
 networkx = "*"
 click = "*"
 matplotlib = "*"
+graphviz = "*"
 rich = ">=13.0.0"
 tenacity = "*"
 litellm = "*"

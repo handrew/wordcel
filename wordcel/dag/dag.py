@@ -7,7 +7,6 @@ from datetime import datetime
 import yaml
 import pandas as pd
 import networkx as nx
-import matplotlib.pyplot as plt
 from rich import print
 from rich.console import Console
 from rich.progress import (
@@ -292,20 +291,41 @@ class WordcelDAG:
                 BackendRegistry.register(backend_type, backend_class)
 
     def save_image(self, path: str) -> None:
-        """Save an image of the DAG using graph.draw."""
-        subset_key = "__wordcel_dag_layer__"
-        # `multipartite_layout` expects the layer as a node attribute, so add the
-        # numeric layer value as a node attribute
-        for layer, node in enumerate(nx.topological_generations(self.graph)):
-            for n in node:
-                self.graph.nodes[n][subset_key] = layer
+        """Save an image of the DAG using graphviz."""
+        try:
+            import graphviz
+        except ImportError:
+            print("Graphviz is not installed. Please install it with 'pip install graphviz'")
+            return
 
-        pos = nx.multipartite_layout(self.graph, subset_key=subset_key)
-        nx.draw_networkx(self.graph, with_labels=True, pos=pos)
-        # Make the image LARGE!
-        plt.gcf().set_size_inches(18.5, 10.5)
-        plt.savefig(path)
-        plt.close()
+        dot = graphviz.Digraph(self.name)
+        dot.attr(rankdir='TB', splines='ortho', ranksep='1.5', nodesep='0.5')
+        dot.attr('node', shape='box', style='rounded,filled', fillcolor='lightblue', fontname='Helvetica')
+        dot.attr('edge', fontname='Helvetica', fontsize='10')
+
+        # Use topological sort to create layers
+        for i, generation in enumerate(nx.topological_generations(self.graph)):
+            with dot.subgraph() as s:
+                s.attr(rank='same')
+                for node_id in generation:
+                    node = self.nodes[node_id]
+                    node_type = node.__class__.__name__
+                    label = f"{node_id}\n({node_type})"
+                    s.node(node_id, label=label)
+
+        for u, v in self.graph.edges():
+            dot.edge(u, v)
+
+        try:
+            # Infer format from path extension
+            render_path, file_format = os.path.splitext(path)
+            file_format = file_format.lstrip('.')
+            
+            dot.render(render_path, format=file_format, view=False, cleanup=True)
+            print(f"DAG visualization saved to {path}")
+        except graphviz.backend.ExecutableNotFound:
+            print("Graphviz executable not found. Please install it from https://graphviz.org/download/")
+
 
     def create_graph(self) -> nx.DiGraph:
         G = nx.DiGraph()
@@ -470,7 +490,7 @@ class WordcelDAG:
 
             node_timestamp = datetime.now().strftime("%H:%M:%S")
             console.print(
-                f"[dim][{node_timestamp}][/dim] [bold cyan]\\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim]",
+                f"[dim][{node_timestamp}][/dim] [bold cyan]\[{i}/{len(nodes_list)}][/bold cyan] [bold]{node_id}[/bold] [dim]({node_type}{model_info})[/dim]",
                 end=" ",
             )
 
