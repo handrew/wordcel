@@ -6,11 +6,11 @@
 
 ## Overview
 
-WordcelDAG is a flexible framework for defining and executing Directed Acyclic Graphs (DAGs) of data processing tasks, particularly involving LLMs and dataframes. 
+WordcelDAG is a flexible framework for defining and executing Directed Acyclic Graphs (DAGs) of data processing tasks, particularly involving LLMs and dataframes.
 
 There are plenty of great Pythonic DAG execution frameworks out there. Metaflow is great for data science pipelines; Prefect, Luigi, and Dagster for data pipelines; I really liked ControlFlow and Burr for agentic workflows. Rivet by Ironclad was probably the closest thing to what I wanted, but it didn't have great support for Python, and you had to use a visual canvas (as with Flowise, LangFlow, etc).
 
-While great projects in their own right, none of the above quite provided what I was looking for. Accordingly, the underlying motivation for WordcelDAG was to create a DAG framework with a few things in mind: 
+While great projects in their own right, none of the above quite provided what I was looking for. Accordingly, the underlying motivation for WordcelDAG was to create a DAG framework with a few things in mind:
 1. YAML as a first-class citizen. I didn't want to be writing and maintaining Python, or drawing on a visual canvas.
 2. Making it easy to call and chain LLMs.
 3. Support for working with dataframes.
@@ -47,32 +47,32 @@ You can also give input data to your DAG at runtime.
 results = dag.execute(input_data={"node_id": data})
 ```
 
-where `node_id` is the node that `data` is intended for. 
+where `node_id` is the node that `data` is intended for.
 
 
 The full constructor for WordcelDAG accepts the following parameters:
 
 ```
-dag_definition (Union[str, Dict[str, Any]]): 
+dag_definition (Union[str, Dict[str, Any]]):
     Path to the YAML file containing the DAG definition, or a dict of the DAG itself.
 
-secrets (Union[str, Dict[str, Any]], optional): 
+secrets (Union[str, Dict[str, Any]], optional):
     Path to a YAML file containing secrets/credentials or a dict of the secrets. Defaults to None.
 
-runtime_config_params (Dict[str, str], optional): 
-    Dictionary of configuration parameters that can be passed at runtime. 
+runtime_config_params (Dict[str, str], optional):
+    Dictionary of configuration parameters that can be passed at runtime.
     These override any configurations defined in the YAML file. Defaults to None.
 
-custom_functions (Dict[str, Callable], optional): 
-    Dictionary mapping function names to custom Python functions that can be used 
+custom_functions (Dict[str, Callable], optional):
+    Dictionary mapping function names to custom Python functions that can be used
     in the DAG. Defaults to None.
 
-custom_nodes (Dict[str, Type[Node]], optional): 
-    Dictionary mapping node types to custom Node class implementations. 
+custom_nodes (Dict[str, Type[Node]], optional):
+    Dictionary mapping node types to custom Node class implementations.
     Use this to extend the DAG with custom node types. Defaults to None.
 
-custom_backends (Dict[str, Type[Backend]], optional): 
-    Dictionary mapping backend names to custom Backend class implementations. 
+custom_backends (Dict[str, Type[Backend]], optional):
+    Dictionary mapping backend names to custom Backend class implementations.
     Use this to add support for custom execution backends. Defaults to None.
 ```
 
@@ -92,35 +92,50 @@ def initialize_dag(
 
 ### Quick Start with the CLI
 
-There is a CLI! `wordcel dag --help`:
+There is a powerful CLI available. Get started with `wordcel dag --help`:
 
 ```
 Usage: wordcel dag [OPTIONS] COMMAND [ARGS]...
 
-  WordcelDAG commands.
+  🔗 WordcelDAG commands for pipeline management
+
+  Create, execute, and visualize LLM processing pipelines using
+  declarative YAML configuration files.
 
 Options:
   --help  Show this message and exit.
 
 Commands:
+  describe         🔎 Show detailed information about a specific node type
+  dryrun           🔍 Show what would be executed without running the pipeline
   execute          Execute a pipeline.
-  list-node-types  List available node types.
-  new              Create a new pipeline.
+  list-node-types  📋 List all available node types with descriptions
+  new              📝 Create a new pipeline configuration file
   visualize        Visualize a pipeline.
 ```
 
-1. Start by creating a new YAML file with `wordcel dag new your_yaml_file.yaml`.
+1.  **Create a new pipeline file:** Start by creating a new YAML file with a template.
+    `wordcel dag new your_pipeline.yaml --template basic`
 
-2. Edit the resulting yaml file according to your needs. You can use `wordcel dag visualize your_yaml_file.yaml visualization.png --custom-nodes /path/to/your/nodes.py` to save an image of your DAG to inspect visually.
+2.  **Inspect node types:** See what's available to use in your pipeline.
+    `wordcel dag list-node-types`
 
-3. Once you are satisfied, you can run `wordcel dag execute your_yaml_file.yaml --verbose` to run the DAG and get a nice output.
+3.  **Get node details:** Get detailed information about a specific node.
+    `wordcel dag describe llm`
 
-The `--config` param for `execute` can be used to do a simple string template substitution in the YAML, in case you want to be able to pass in variables in the CLI at runtime. You might use:
+4.  **Visualize your DAG:** Before running, you can save an image of your DAG to inspect it visually.
+    `wordcel dag visualize your_pipeline.yaml visualization.png`
 
-`wordcel dag execute pipeline.yaml -c key_to_replace your_value -c another_key another_value` to substitute `"${key_to_replace}"` and `"${another_key}"` wherever it is found in the `pipeline.yaml` file. (Note the `${}` templating with the dollar sign, as it is different than the `{}` templating done at the `LLMNode`, and the same templating as with `StringTemplateNode`. Make sure that your `runtime_config_params` do not overlap with the placeholders in the `StringTemplateNode`s).
+5.  **Dry run your pipeline:** Validate the configuration and see the execution plan without running any tasks. This is highly recommended.
+    `wordcel dag dryrun your_pipeline.yaml`
 
-Similarly `--input` or `-i` can be used to give values to the DAG as if you were running `.execute(input_data=input_data)` in Python code, though it is not very ergonomic to give more complex values.
+6.  **Execute the pipeline:** Once you are satisfied, run the DAG.
+    `wordcel dag execute your_pipeline.yaml --verbose`
 
+You can pass variables to your pipeline at runtime using `--config-param` and `--input`:
+
+-   `--config-param` (`-c`): Substitutes variables in the YAML file. For example, `wordcel dag execute pipeline.yaml -c key_to_replace your_value` will replace all instances of `${key_to_replace}` in the YAML file with `your_value`.
+-   `--input` (`-i`): Provides input data directly to a node. For example, `wordcel dag execute pipeline.yaml -i node_id "some value"` is the CLI equivalent of `dag.execute(input_data={"node_id": "some value"})`.
 
 ## DAG Configuration (YAML)
 
@@ -156,9 +171,9 @@ nodes:
 Some examples can be found in the `tests` folder.
 
 General parameters for all nodes:
-- id (required): A unique identifier for the node (if not provided, it will be auto-generated).
+- id (required): A unique identifier for the node.
 - type (required): Defines what type the node is.
-- inputs (optional): List of input node ids (for nodes that accept input from other nodes). Can be none.
+- input (optional): A single node ID or a list of node IDs that this node depends on.
 
 ### `csv` CSVNode
 
@@ -166,12 +181,6 @@ Returns a pandas DataFrame.
 
 Required:
 - `path`: The file path to the CSV file.
-
-Optional:
-- None specific to this node.
-
-Input data:
-- Does not use any input data.
 
 ```yaml
 - id: load_csv_data
@@ -181,19 +190,15 @@ Input data:
 
 ### `yaml` YAMLNode
 
+Returns a dictionary.
+
 Required:
-- `path`: The file path to the JSON file.
-
-Optional:
-- None specific to this node.
-
-Input data:
-- Does not use any input data.
+- `path`: The file path to the YAML file.
 
 ```yaml
-- id: load_json_data
-  type: json
-  path: /path/to/your/data.json
+- id: load_yaml_data
+  type: yaml
+  path: /path/to/your/data.yaml
 ```
 
 
@@ -204,12 +209,6 @@ Returns a `dict`.
 Required:
 - `path`: The file path to the JSON file.
 
-Optional:
-- None specific to this node.
-
-Input data:
-- Does not use any input data.
-
 ```yaml
 - id: load_json_data
   type: json
@@ -218,16 +217,13 @@ Input data:
 
 ### `json_dataframe` JSONDataFrameNode
 
-This is just a wrapper over `pd.read_json`, so whatever works for `read_json` will work here too.
+A wrapper over `pd.read_json`. Returns a pandas DataFrame.
 
 Required:
 - `path`: The file path to the JSON file.
 
 Optional:
 - `read_json_kwargs`: A dictionary of keyword arguments to pass to `pd.read_json()`.
-
-Input data:
-- Does not use any input data.
 
 ```yaml
 - id: load_json_as_dataframe
@@ -239,21 +235,18 @@ Input data:
 
 ### `file_directory` FileDirectoryNode
 
-Reads txt, md, and html files from a directory or list of directories, supporting regex patterns. Returns a DataFrame of columns: `file_path`, `content`, `file_type`.
+Reads txt, md, and html files from a directory or list of directories, supporting regex patterns. Returns a DataFrame with columns: `file_path`, `content`, `file_type`.
 
 Required:
-- `path`: List or string. Can be regex.
-
-Optional:
-- None specific to this node.
+- `path`: A string or list of strings representing file paths or glob patterns.
 
 Input data:
-- Can use input data if it is a dict with `path`.
+- Can optionally receive a dictionary with a `path` key to override the path in the config.
 
 ```yaml
 - id: read_dir
   type: file_directory
-  path: /paths/to/your/file.txt
+  path: "docs/**/*.md"
 ```
 
 
@@ -263,12 +256,7 @@ Returns a pandas DataFrame.
 
 Required:
 - `query`: The SQL query to execute.
-
-Optional:
-- `None` specific to this node, but requires database connection details in secrets.
-
-Input data:
-- Does not use any input data.
+- A `database_url` must be provided in the secrets file.
 
 ```yaml
 - id: execute_sql_query
@@ -279,26 +267,20 @@ Input data:
 
 ### `string_template` StringTemplateNode
 
-Constructs a string of the form:
-```
-# Header
-
-{template}
-```
-where `template` is repeated for each item, if given a list of dictionaries or pandas DataFrame (each row treated as a dict).
-
+Constructs a string by substituting placeholders in a template.
 
 Required:
-- template: String template using `${keyword}` format.
+- `template`: String template using `${placeholder}` format.
 
 Optional:
-- None specific to this node. 
-- mode: "single" or "multiple". Default "single". If single, then it repeats the template for each item. If multiple, then it returns a list.
+- `header`: A string to prepend to the output, followed by two newlines.
+- `mode`: "single" (default) or "multiple". In "single" mode, it combines all results into one string. In "multiple" mode, it returns a list of strings.
 
 Input data:
-- If the `input` parameter in the YAML is a list of node IDs, the node will automatically receive a dictionary mapping those node IDs to their results. This allows you to reference inputs by their node ID in the template (e.g., `${node_id}`).
-- If the `input` is a single node ID that produces a list or DataFrame, the node will iterate over that data, applying the template to each item (based on the `mode`).
-- If the input is a single node ID that produces a dictionary, it will be used for a single template substitution.
+- **Dictionary:** Used for a single substitution (e.g., `template: "Hello, ${name}"`).
+- **List or DataFrame:** Iterates over each item. In "single" mode, concatenates the results. In "multiple" mode, returns a list of results.
+- **String:** Substituted for the `{input}` placeholder.
+- **Multiple Nodes:** If `input` is a list of node IDs, the results are combined into a dictionary mapping node IDs to their results, which can then be used in the template (e.g., `template: "Data from ${nodeA} and ${nodeB}"`).
 
 ```yaml
 # Example with multiple inputs mapped by ID
@@ -310,376 +292,250 @@ Input data:
     - place_node
 ```
 
-```yaml
-# Example with a single input containing a list of data
-- id: format_list
-  type: string_template
-  template: "Item: ${item_name}"
-  input: list_producing_node
-```
-
-
 ### `string_concat` StringConcatNode
 
-Concatenates strings with optional separator, prefix, and suffix in the form:
-```
-{prefix}{string1}{separator}{string2}{separator}...{stringN}{suffix}
-```
-where each string comes from the input data. Handles various input types including single strings, lists, DataFrames, and Series.
-
-Required:
-- None. All configuration parameters are optional.
+Concatenates strings with an optional separator, prefix, and suffix.
 
 Optional:
-- separator: String to insert between concatenated strings. Default: " "
-- prefix: String to add at the beginning. Default: ""
-- suffix: String to add at the end. Default: ""
-- column: Required only when input is DataFrame - specifies which column to use
+- `separator`: String to insert between concatenated strings. Default: " "
+- `prefix`: String to add at the beginning. Default: ""
+- `suffix`: String to add at the end. Default: ""
+- `column`: Required if the input is a DataFrame; specifies which column to use.
 
 Input data:
-- Single string
-- List of strings
-- DataFrame (requires 'column' config)
-- Pandas Series
+- A single string, a list of strings, a pandas Series, or a pandas DataFrame.
 
 ```yaml
-# Basic concatenation
-- id: concat_strings
-  type: string_concat
-  separator: " "
-  input: previous_node_id
-
-# With all options
 - id: fancy_concat
   type: string_concat
   separator: ", "
   prefix: "Items: ["
   suffix: "]"
   column: "text"  # only needed for DataFrame input
-  input: previous_node_id
-
-# Examples of results:
-# Input: ["apple", "banana", "orange"]
-# Basic: "apple banana orange"
-# Fancy: "Items: [apple, banana, orange]"
-
-# Input: DataFrame with column 'text': ["apple", "banana", "orange"]
-# Basic: "apple banana orange"
-# Fancy: "Items: [apple, banana, orange]"
+  input: dataframe_node
 ```
-
-The node automatically handles:
-- Converting non-string elements to strings
-- Filtering out None values
-- Various input types flexibly
-- Proper string formatting with consistent separator/prefix/suffix application
-
 
 ### `llm` LLMNode
 
-Returns a string, list, or DataFrame, depending on what is given. In general, the philosophy is to return a mutated version of what is given to the LLM Node. So, if the node is given a dict or DataFrame, then it simply updates the dict / DataFrame with its answer (according to `output_field`). The exception is for a single dict - it will simply return a string.
+Queries an LLM API. The output type generally mirrors the input type (e.g., DataFrame in, modified DataFrame out).
 
 Required:
-- `template`: The prompt template for the LLM.
+- `template`: The prompt template for the LLM. Must contain `{input}`.
 
 Optional:
-- `input_field`: The column name (if given a DataFrame or list of DataFrames) or field (if given dicts) to use as input. 
-- `output_field`: The column name (if given a DataFrame or list of DataFrames) or field (if given dicts) to use as output. If DataFrame(s), then the new column will be named `output_field`. 
-- `model`: Which model to use. Supported models can be found in `wordcel.llms`, but is generally limited to OpenAI, Anthropic, Gemini.
+- `input_field`: The column/field to use as input when given a DataFrame or list of dicts.
+- `output_field`: The column/field to store the LLM's output. Required if `input_field` is used.
+- `model`: The model to use (e.g., "openai/gpt-4o").
 - `num_threads`: Number of threads for parallel processing (default: 1).
-- `web_search_options`: A dictionary of options for web searching. For example: `{"search_context_size": "medium"}`.
+- `web_search_options`: A dictionary of options for web searching.
 
 Input data:
-- Handles str, list of strings, or pandas DataFrame.
+- Handles `str`, `list` of strings, `dict`, `pd.Series`, or `pd.DataFrame`.
 
 ```yaml
 - id: generate_summary
   type: llm
   template: "Summarize the following text: {input}"
   input: previous_node_id
-  input_field: text_column
-  output_field: output_field
+  input_field: "text_column"
+  output_field: "summary_column"
   num_threads: 4
 ```
 
 ### `llm_filter` LLMFilterNode
 
-Returns a pandas DataFrame, slimmed down from what was given. You *must* ask a yes or no question and instruct the LLM to answer with yes or no. 
+Filters a DataFrame based on a "Yes" or "No" response from an LLM.
 
 Required:
 - `column`: The column to apply the filter on.
-- `prompt`: The prompt to use for filtering.
-- `input`: The input node (must be a single input).
+- `prompt`: The prompt for the LLM. It must ask a question that can be answered with "Yes" or "No".
+- `input`: A single input node that produces a DataFrame.
 
 Optional:
-- `model`: Which model to use. Supported models can be found in `wordcel.llms`, but is generally limited to OpenAI, Anthropic, Gemini.
+- `model`: The model to use.
 - `num_threads`: Number of threads for parallel processing (default: 1).
-
-Input data:
-- Handles pandas DataFrame only.
 
 ```yaml
 - id: filter_content
   type: llm_filter
   input: previous_node_id
-  column: content
+  column: "content"
   prompt: "Is this content suitable for all ages? Answer only Yes or No."
-  num_threads: 2
 ```
 
 ### `file_writer` FileWriterNode
 
-Returns None, simply writes the file to the given path.
+Writes data to a file. Does not return any data.
 
 Required:
-- `path`: The file path to write the output.
+- `path`: The file path for the output.
 
 Optional:
-- `None` specific to this node.
-- mode: "single" or "multiple". Default "single". If single, then it attempts to write the input data to a single file. If multiple, it will write multiple files, and requires `path` to have a string format placeholder "{i}" for the index of the item. 
+- `mode`: "single" (default) or "multiple". If "multiple", the `path` must contain `{i}` as a placeholder for the index.
 
 Input data:
-- String, list, or DataFrame.
+- A string, list, or DataFrame.
 
 ```yaml
 - id: save_results
   type: file_writer
   input: previous_node_id
-  path: /path/to/output/results.txt
+  path: "output/results.txt"
 ```
 
 ### `dataframe_operation` DataFrameOperationNode
 
-This is just a wrapper over `pd.DataFrame`, so anything that a pandas DataFrame can accept can be used here too. Also supports `pd.concat` and `pd.merge` if given a list of DataFrames in the input_data. There is also a `set_column` operation as a wrapper around `df["column_name"] = series`, which requires a `column_name`, shown below.
-
+Performs an operation on a pandas DataFrame. This is a powerful node that can call any DataFrame method. It also supports `pd.concat` and `pd.merge`.
 
 Required:
-- `operation`: The DataFrame operation to perform.
+- `operation`: The DataFrame operation to perform (e.g., "groupby", "head", "concat", "merge", "set_column").
 
 Optional:
 - `args`: List of positional arguments for the operation.
 - `kwargs`: Dictionary of keyword arguments for the operation.
+- `column_name`: Required for the `set_column` operation.
 
 Input data:
-- DataFrame or list of DataFrames.
-
-
-```yaml
-- id: process_dataframe
-  type: dataframe_operation
-  input: previous_node_id
-  operation: groupby
-  args: ["category"]
-  kwargs:
-    as_index: false
-```
-
-Example with `set_column`:
+- A DataFrame or a list of DataFrames.
 
 ```yaml
-- id: process_dataframe
+# Example with set_column
+- id: add_new_column
   type: dataframe_operation
-  input: [dataframe_from_previous_node, series_or_list_from_previous_node]
+  input: [my_dataframe, my_series]
   operation: set_column
-  column_name: "new_col_name" 
-```
-
-which is a wrapper on 
-```python
-dataframe_from_previous_node[new_col_name] = series_or_list_from_previous_node
+  column_name: "new_column"
 ```
 
 ### `python_script` PythonScriptNode
 
-Either returns a list consisting of attempts to read JSON from `stdout` from each execution, or from the `return_output_file` if given. Otherwise returns an empty list.
+Executes an external Python script.
 
 Required:
-- `script_path`: The path to the Python script to execute.
+- `script_path`: The path to the Python script.
 
 Optional:
 - `args`: List of command-line arguments to pass to the script.
-- `return_stdout` (bool): Attempts to read JSON from whatever is printed to stdout.
-- `return_output_file` (str) or `return_stdout` (bool): Either the script must save its output to `return_output_file` or print a JSON-serializable string to stdout.
+- `return_stdout`: (boolean) If true, captures and returns the script's standard output.
+- `return_output_file`: (string) If provided, reads and returns the content of this file after the script runs.
 
 Input data:
-- List of strings only, which are converted to command line arguments.
-
+- Can be a primitive type, list, Series, or DataFrame. The input is converted to a string and passed as the final command-line argument to the script.
 
 ```yaml
 - id: run_custom_script
   type: python_script
   script_path: /path/to/your/script.py
-  args: ["arg1", "arg2"]
+  args: ["--mode", "fast"]
+  return_stdout: true
 ```
 
 
 ### `python_function` PythonFunctionNode
 
-Executes a specific Python function from a module or script. Returns whatever the function returns.
+Executes a specific Python function from a module.
 
 Required:
-- `function_path`: Function path should be in the format: package.module.function_name or local.module.function_name.
-- `mode`: Either `single` or `multiple`. `single` by default. If given `multiple`, then will process iterables item by item.
-- If the input data is a DataFrame, then must give `input_field` and `output_field`. 
+- `function_path`: The dotted path to the function (e.g., `my_module.my_function`).
 
 Optional:
-- `args`: List of positional arguments to pass to the function
-- `kwargs`: Dictionary of keyword arguments to pass to the function
-- `input_kwarg`: If given, gives the input data as this keyword arg.
+- `mode`: "single" (default) or "multiple".
+- `args`: List of positional arguments for the function.
+- `kwargs`: Dictionary of keyword arguments for the function.
+- `input_kwarg`: If provided, the input data will be passed as a keyword argument with this name.
+- `input_field`: Required for DataFrame input in `multiple` mode.
+- `output_field`: The column name for the results when the input is a DataFrame in `multiple` mode.
 
 Input data:
-- Any type. Handling depends on `mode` setting.
-
-Examples:
+- Any type. Behavior is controlled by `mode`.
 
 ```yaml
-# Example 1: Basic usage with a simple function
-# my_functions.py:
-# def add_one(x):
-#     return x + 1
-nodes:
-  - id: add_numbers
-    type: python_function
-    function_path: my_functions.add_one
-    mode: single
-    input: 5  # Returns 6
-
-# Example 2: Multiple mode with a list input
-# text_utils.py:
-# def uppercase(text):
-#     return text.upper()
-nodes:
-  - id: uppercase_words
-    type: python_function
-    function_path: text_utils.uppercase
-    mode: multiple
-    input: ["hello", "world"]  # Returns ["HELLO", "WORLD"]
-
-# Example 3: Using with DataFrame and specifying input/output fields
-# sentiment.py:
-# def analyze_sentiment(text):
-#     return "positive" if "good" in text.lower() else "negative"
-nodes:
-  - id: analyze_reviews
-    type: python_function
-    function_path: sentiment.analyze_sentiment
-    mode: multiple
-    input_field: review_text
-    output_field: sentiment
-    input: reviews_dataframe  # DataFrame with 'review_text' column
+# Example with DataFrame
+- id: analyze_reviews
+  type: python_function
+  function_path: sentiment.analyze_sentiment
+  mode: multiple
+  input_field: "review_text"
+  output_field: "sentiment"
+  input: reviews_dataframe
 ```
 
 
 ### `dag` DAGNode
 
-Returns a `dict` of DAG results.
-
-```yaml
-- id: sub_dag
-  type: dag
-  path: /path/to/sub_dag.yaml
-  secrets_path: /path/to/sub_dag_secrets.yaml
-```
+Executes a sub-DAG.
 
 Required:
 - `path`: The path to the YAML file defining the sub-DAG.
 
 Optional:
-- `output_key`: String or list. Since a DAG returns a dict of its results, `output_key` lets us select one or more of intermediate results. If str, then simply selects the results for that key. If `list`, then it gives you a subset of the result dict.
+- `output_key`: A string or list of strings to select specific results from the sub-DAG's output dictionary.
 - `secrets_path`: The path to the secrets file for the sub-DAG.
-- `input_nodes`: List of `node_id`s to give the `input_data` to. 
-- `runtime_config_params`: Any runtime config params you want to provide. These are the string substitutions you do for "${param}" variables at runtime, e.g., from the CLI using `-c param value`. You can either define new ones, or get it from a previous node (see example below).
+- `input_nodes`: A list of node IDs in the sub-DAG to which the input data should be passed.
+- `runtime_config_params`: A dictionary to pass runtime configuration to the sub-DAG. This allows for dynamic configuration of sub-DAGs. You can even pass results from previous nodes.
 
 ```yaml
 - id: sub_dag
   type: dag
   path: /path/to/sub_dag.yaml
-  secrets_path: /path/to/sub_dag_secrets.yaml
   runtime_config_params:
-    your_param: your param
-    from_input_data: 
-      input_param: subdag_param
-```
-If `input_param` is a key in your `input_data`, then it will grab that and map it to `subdag_param` config param. Otherwise, it will just pass the entire input_data through. The latter is useful if it's just a string, not a dict.
-
-Input data:
-- None or a dictionary, similar to how you might use `dag.execute`.
-
-
-## Defining Custom Functions
-
-To create custom functions, simply pass in a dictionary of functions to the constructor. You can them use them in the YAML by indexing the key.
-
-```python
-from wordcel.dag.utils import create_custom_functions_from_files
-
-custom_functions = create_custom_functions_from_files([file_path])
-dag = WordcelDAG("path/to/your/dag.yaml", custom_nodes=custom_functions)
+    some_value_for_subdag: "hello from parent"
+    value_from_previous_node:
+      input_param: previous_node_result # Maps previous_node_result to subdag param
 ```
 
+## Defining Custom Components
 
-## Defining Custom Nodes
+You can extend WordcelDAG with your own custom nodes, functions, and backends.
 
-To create a custom node type:
+### Custom Functions
 
-1. Create a new class that inherits from the `Node` base class
-2. Implement the `execute` and `validate_config` methods
-3. Pass the custom node type to the constructor. 
-
-Example:
+Create a Python file with your functions and pass the file path to the `initialize_dag` function or the `WordcelDAG` constructor.
 
 ```python
-from wordcel.dag import Node, NodeRegistry
+# my_functions.py
+def my_custom_logic(text):
+    return text.upper()
+```
+```python
+# main.py
+from wordcel.dag.utils import initialize_dag
+dag = initialize_dag("pipeline.yaml", custom_functions="my_functions.py")
+```
+
+### Custom Nodes
+
+1.  Create a class that inherits from `wordcel.dag.Node`.
+2.  Implement the `execute` and `validate_config` methods.
+3.  Pass a dictionary of your custom nodes to the `WordcelDAG` constructor or use the `create_custom_nodes_from_files` utility.
+
+```python
+# my_nodes.py
+from wordcel.dag import Node
 
 class MyCustomNode(Node):
     def execute(self, input_data):
-        # Your custom logic here
-        return processed_data
+        # Custom logic
+        return input_data
 
     def validate_config(self):
-        # Validate your node's configuration
+        # Validation logic
         return True
-
-# Use in your DAG creation
-dag = WordcelDAG("path/to/your/dag.yaml", custom_nodes={"my_custom_node": MyCustomNode})
-```
-
-There is also a utility function to automatically create a dict of custom nodes from a file.
-
-```python
-from wordcel.dag.utils import create_custom_nodes_from_files
-
-custom_nodes = create_custom_nodes_from_files([file_path])
-dag = WordcelDAG("path/to/your/dag.yaml", custom_nodes=custom_nodes)
 ```
 
 ## Backends
 
-WordcelDAG supports the use of backends for caching node results. This can significantly speed up repeated executions of the DAG by avoiding redundant computations.
-
-### Using Backends
-
-To use a backend, specify it in your DAG configuration YAML file:
+WordcelDAG supports backends for caching results to speed up repeated executions.
 
 ```yaml
 dag:
-  name: "Your DAG Name"
+  name: "My Caching DAG"
   backend:
     type: "local"
-    cache_dir: "/path/to/cache/directory"
-
-nodes:
-  # ... node definitions ...
+    cache_dir: ".my_cache"
 ```
 
-Like with custom nodes, you can create custom backends by creating a class that inherits from the Backend class and overriding `save`, `load`, and `exists`. 
-
-```python
-from wordcel.dag.utils import create_custom_backends_from_files
-
-custom_backends = create_custom_backends_from_files([file_path])
-dag = WordcelDAG("path/to/your/dag.yaml", custom_backends=custom_backends)
-```
+You can also create custom backends by inheriting from `wordcel.dag.Backend` and implementing the `save`, `load`, and `exists` methods.
 
 ## YAML Examples
 
@@ -718,10 +574,3 @@ nodes:
     path: "test_output.txt"
     input: process_filtered
 ```
-
-## Other Features
-
-- Secrets management: Use a separate YAML file for sensitive information.
-- Custom functions: Pass custom functions to be used in nodes.
-- Backends: Use backends to cache node results and speed up repeated executions.
-- DAG visualization: Use `dag.save_image("path/to/image.png")` to visualize your DAG.

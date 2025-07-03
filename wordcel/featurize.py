@@ -12,7 +12,7 @@ import pandas as pd
 def apply_io_bound_function(
     df: pd.DataFrame,
     user_function: Callable[[str], Any],
-    text_column: Optional[str] = None,
+    text_column: str,
     num_threads: int = 4,
     cache_folder: Optional[str] = None,
 ) -> pd.Series:
@@ -22,15 +22,13 @@ def apply_io_bound_function(
     Parameters:
         df (pd.DataFrame): Pandas DataFrame containing the data.
         user_function (function): User-provided function that takes text as input and returns a JSON.
-        text_column (str): Name of the column containing the text to process. If None, the first string column will be used.
+        text_column (str): Name of the column containing the text to process.
         num_threads (int): Number of threads for concurrent processing.
         cache_folder (str): Folder to store the cached JSON outputs.
 
     Returns:
-        pd.DataFrame: The original DataFrame with an additional 'result' column containing the JSON outputs.
+        pd.Series: A series of the results, index-aligned with the original df.
     """
-    assert text_column is not None, "The 'text_column' argument must be specified."
-
     if cache_folder and not os.path.exists(cache_folder):
         os.makedirs(cache_folder)
 

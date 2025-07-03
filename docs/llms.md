@@ -1,79 +1,35 @@
 # LLM API Wrappers
 
-This package provides minimal wrapper functions for interacting with various LLM APIs, including OpenAI, Anthropic, and Google Gemini.
+This package provides a unified function, `llm_call`, for interacting with various LLM APIs, including OpenAI, Anthropic, and Google Gemini, powered by the `litellm` library. It also provides a wrapper for OpenAI's embedding API.
 
 ## llm_call
 
 ```python
-def llm_call(prompt, model=None, **kwargs)
+def llm_call(prompt: str, model: Optional[str] = None, **kwargs: Any) -> str:
 ```
 
-Router function that directs calls to the appropriate API based on the provider specified in the model name.
+Wrapper for OpenAI, Anthropic, and Google calls using `litellm`.
 
 **Parameters:**
 - `prompt` (str): The user's input prompt.
-- `model` (str): Must be in the format `<provider>/<model>` (e.g., "openai/gpt-4o").
-- `**kwargs`: Additional parameters passed to the specific API call function.
+- `model` (str): The model to use, in the format `<provider>/<model>` (e.g., "openai/gpt-4o").
+- `**kwargs`: Additional parameters passed to `litellm.completion`, such as:
+  - `system_prompt` (str, optional): System message to set context.
+  - `temperature` (float, optional): Controls randomness in output.
+  - `max_tokens` (int, optional): Maximum number of tokens in the response.
 
 **Supported Providers:**
-- `openai`: OpenAI models (e.g., "openai/gpt-4o")
-- `google`: Google Gemini models (e.g., "google/gemini-1.5-flash")
-- `anthropic`: Anthropic models (e.g., "anthropic/claude-3-haiku-20240307")
+- `openai`: For OpenAI models (e.g., "openai/gpt-4o").
+- `anthropic`: For Anthropic models (e.g., "anthropic/claude-3-haiku-20240307").
+- `gemini`: For Google Gemini models (e.g., "gemini/gemini-2.5-flash").
 
 **Returns:**
-- str: The generated text response.
+- str: The generated text response from the language model.
 
 **Example:**
 ```python
+from wordcel.llms import llm_call
 response = llm_call("What is the capital of France?", model="openai/gpt-4o")
-print(response)
-```
-
-## openai_call
-
-```python
-def openai_call(
-    prompt,
-    system_prompt=None,
-    model=None,
-    max_tokens=None,
-    temperature=1,
-    reasoning_effort=None,
-    base_url=None,
-    api_key=None,
-    **kwargs
-)
-```
-
-Wrapper function for OpenAI's completion API. This function is also used internally for Google and Anthropic API calls.
-
-**Parameters:**
-- `prompt` (str): The user's input prompt.
-- `system_prompt` (str, optional): System message to set context. Default: None
-- `model` (str): The model to use.
-- `max_tokens` (int, optional): Maximum number of tokens in the response. Default: None
-- `temperature` (float, optional): Controls randomness in output. Default: 1
-- `reasoning_effort` (str, optional): Level of reasoning effort ("low", "medium", "high", or "none"). Default: None
-- `base_url` (str, optional): Custom API base URL. Default: None
-- `api_key` (str, optional): Custom API key. Default: None
-- `**kwargs`: Additional parameters including:
-  - `top_p` (float, optional): Controls diversity via nucleus sampling. Default: 1
-  - `presence_penalty` (float, optional): Penalizes repeated tokens. Default: 0
-
-**Returns:**
-- str: The generated text response.
-
-**Note:** When using `base_url` and `api_key`, both must be provided together.
-
-**Example:**
-```python
-from wordcel.llms import openai_call
-response = openai_call(
-    "Explain quantum computing in simple terms.",
-    model="gpt-4o",
-    system_prompt="You are a science educator for beginners.",
-    temperature=0.7
-)
 print(response)
 ```
 
@@ -102,9 +58,9 @@ print(len(embedding))  # Print the dimensionality of the embedding
 ## Environment Variables
 
 The following environment variables are used by these functions:
-- `OPENAI_API_KEY`: Required for OpenAI API calls
-- `ANTHROPIC_API_KEY`: Required for Anthropic API calls
-- `GEMINI_API_KEY`: Required for Google Gemini API calls
+- `OPENAI_API_KEY`: Required for OpenAI API calls.
+- `ANTHROPIC_API_KEY`: Required for Anthropic API calls.
+- `GEMINI_API_KEY`: Required for Google Gemini API calls.
 
 ## Usage with Different Providers
 
@@ -115,7 +71,7 @@ response = llm_call("Tell me a joke", model="openai/gpt-4o")
 
 ### Google Gemini
 ```python
-response = llm_call("Explain machine learning", model="google/gemini-2.0-flash")
+response = llm_call("Explain machine learning", model="gemini/gemini-2.5-flash")
 ```
 
 ### Anthropic

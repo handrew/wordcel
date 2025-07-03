@@ -9,7 +9,7 @@ This module provides `apply_io_bound_function`, a function to help rapidly featu
 def apply_io_bound_function(
     df,
     user_function,
-    text_column=None,
+    text_column,
     num_threads=4,
     cache_folder=None
 )
@@ -20,7 +20,7 @@ Apply an I/O bound user-provided function to a specific column in a Pandas DataF
 **Parameters:**
 - `df` (pd.DataFrame): Pandas DataFrame containing the data.
 - `user_function` (function): User-provided function that takes text as input and returns a JSON.
-- `text_column` (str): Name of the column containing the text to process. If None, the first string column will be used.
+- `text_column` (str): Name of the column containing the text to process.
 - `num_threads` (int, optional): Number of threads for concurrent processing. Default: 4
 - `cache_folder` (str, optional): Folder to store the cached JSON outputs. Default: None
 
@@ -62,7 +62,7 @@ def sentiment_classify(text):
     return openai_call(prompt, model="gpt-3.5-turbo", max_tokens=32)
 ```
 
-Finally, give `apply_io_bound_function` your df, function, column to process, a unique identifying column, and optionally the number of threads you'd like to use and a cache folder (if none is provided then one will be created for you). 
+Finally, give `apply_io_bound_function` your df, function, column to process, and optionally the number of threads you'd like to use and a cache folder (if none is provided then one will be created for you). The function uses the DataFrame's index to create unique cache files.
 
 ```python
 results = apply_io_bound_function(
@@ -81,17 +81,18 @@ print(df)
 This will output:
 
 ```
-   id result
-0   1    POS
-1   2    NEG
-2   3    POS
-3   4    POS
-4   5    NEG
+0    POS
+1    NEG
+2    POS
+3    POS
+4    NEG
+Name: text, dtype: object
 
-   id                                               text result
-0   1                 I love this product! It's amazing.    POS
-1   2   The service was terrible. I'm very disappointed.    NEG
-2   3                 The weather today is just perfect.    POS
-3   4    This movie is fantastic. I highly recommend it.    POS
-4   5  I had a bad experience with this company's cus...    NEG
+Joined Results:
+   id                                               text results
+0   1                 I love this product! It's amazing.     POS
+1   2   The service was terrible. I'm very disappointed.     NEG
+2   3                 The weather today is just perfect.     POS
+3   4    This movie is fantastic. I highly recommend it.     POS
+4   5  I had a bad experience with this company's cus...     NEG
 ```
