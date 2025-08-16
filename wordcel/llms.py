@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import openai
 import litellm
 
-SUPPORTED_PROVIDERS = ["openai", "anthropic", "gemini"]
+SUPPORTED_PROVIDERS = ["openai", "anthropic", "gemini", "openrouter"]
 
 
 def llm_call(prompt: str, model: Optional[str] = None, **kwargs: Any) -> str:
@@ -26,7 +26,8 @@ def llm_call(prompt: str, model: Optional[str] = None, **kwargs: Any) -> str:
 
     assert model is not None, "Model name must be specified."
     assert "/" in model, "Model name must be in the form `<provider>/<model>`."
-    provider, model_name = model.split("/")
+    parts = model.split("/")
+    provider, model_name = parts[0], "/".join(parts[1:])
     error_msg = f"Provider `{provider}` not supported. Supported providers: {SUPPORTED_PROVIDERS}. "
     error_msg += (
         "Give your model in the form `<provider>/<model>`, like `openai/gpt-4o`."
@@ -47,6 +48,8 @@ def llm_call(prompt: str, model: Optional[str] = None, **kwargs: Any) -> str:
         google_key = os.getenv("GEMINI_API_KEY")
         if google_key:
             os.environ["GOOGLE_API_KEY"] = google_key
+    elif provider == "openrouter" and not os.getenv("OPENROUTER_API_KEY"):
+        raise ValueError("`OPENROUTER_API_KEY` not found.")
 
     # Prepare litellm parameters
     litellm_model = f"{provider}/{model_name}"
