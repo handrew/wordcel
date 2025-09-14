@@ -11,14 +11,14 @@ This file contains helper functions for RAG operations.
 ### generate_similar_queries
 
 ```python
-def generate_similar_queries(query: str, llm_fn=openai_call) -> List[str]
+def generate_similar_queries(query: str, llm_fn=llm_call) -> List[str]
 ```
 
 Generates queries conceptually and semantically similar to the input query.
 
 **Parameters:**
 - `query` (str): The original query.
-- `llm_fn` (function, optional): The language model function to use. Default: `openai_call`
+- `llm_fn` (function, optional): The language model function to use. Default: `llm_call`
 
 **Returns:**
 - List[str]: A list of similar queries.

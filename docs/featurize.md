@@ -35,7 +35,7 @@ First import the relevant functions.
 ```python
 import pandas as pd
 from wordcel.featurize import apply_io_bound_function
-from wordcel.llms import openai_call
+from wordcel.llms import llm_call
 ```
 
 Then, load your data.
@@ -59,7 +59,7 @@ Define your LLM function for extracting features from the text.
 ```python
 def sentiment_classify(text):
     prompt = f"Classify the sentiment of the following text into one of two categories, POS or NEG. Respond in one word only.\n\n{text}"
-    return openai_call(prompt, model="gpt-3.5-turbo", max_tokens=32)
+    return llm_call(prompt, model="gpt-3.5-turbo", max_tokens=32)
 ```
 
 Finally, give `apply_io_bound_function` your df, function, column to process, and optionally the number of threads you'd like to use and a cache folder (if none is provided then one will be created for you). The function uses the DataFrame's index to create unique cache files.
