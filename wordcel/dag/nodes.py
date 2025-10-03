@@ -129,8 +129,8 @@ class JSONDataFrameNode(Node):
 class FileDirectoryNode(Node):
     description = """Node to read text and markdown files from a directory or list of directories, supporting regex patterns."""
     input_spec = {
-        "type": (dict, type(None)),
-        "description": "Optionally accepts a dictionary with a 'path' key (string or list of strings) to override the path in the config.",
+        "type": (dict, type(None), list, pd.DataFrame, pd.Series),
+        "description": "Optionally accepts a dictionary with a 'path' key (string or list of strings) to override the path in the config. Other input types are ignored, allowing this node to be used as a dependency.",
     }
 
     def execute(self, input_data: Any) -> pd.DataFrame:
@@ -144,6 +144,12 @@ class FileDirectoryNode(Node):
                 assert all(
                     isinstance(path, str) for path in paths
                 ), "FileDirectoryNode `path` in input data must be a list of strings."
+        elif input_data is not None and not isinstance(input_data, dict):
+            log.info(
+                f"FileDirectoryNode received input of type {type(input_data).__name__} but expected a dict. "
+                "Ignoring input and using the path from config. This is okay if you are just using the `input` for ordering."
+            )
+
         if isinstance(paths, str):
             paths = [paths]
 
