@@ -20,37 +20,39 @@ def setup_logging(
         format_string: Custom format string. Defaults to WORDCEL_LOG_FORMAT env var or standard format
         log_file: Optional log file path. Uses WORDCEL_LOG_FILE env var if provided
     """
-    level = level or os.getenv("WORDCEL_LOG_LEVEL", "INFO")
+    # Default to WARNING for library usage, but allow override via env var.
+    # This makes the library less noisy by default.
+    level = level or os.getenv("WORDCEL_LOG_LEVEL", "WARNING")
     format_string = format_string or os.getenv(
         "WORDCEL_LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     log_file = log_file or os.getenv("WORDCEL_LOG_FILE")
 
-    # Configure handlers
-    handlers = []
+    # Get the logger for the 'wordcel' package
+    wordcel_logger = logging.getLogger("wordcel")
 
+    # Prevent adding handlers multiple times
+    if wordcel_logger.hasHandlers():
+        wordcel_logger.handlers.clear()
+
+    # Set the desired level for the wordcel package
+    wordcel_logger.setLevel(getattr(logging, level.upper()))
+
+    # Configure handlers
     # Console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(logging.Formatter(format_string))
-    handlers.append(console_handler)
+    wordcel_logger.addHandler(console_handler)
 
     # File handler if specified
     if log_file:
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(logging.Formatter(format_string))
-        handlers.append(file_handler)
+        wordcel_logger.addHandler(file_handler)
 
-    # Configure root logger to be less verbose
-    logging.basicConfig(
-        level=logging.WARNING,
-        format=format_string,
-        handlers=handlers,
-        force=True,  # Override existing config
-    )
-
-    # Set the desired level for the wordcel package
-    wordcel_logger = logging.getLogger("wordcel")
-    wordcel_logger.setLevel(getattr(logging, level.upper()))
+    # Do not propagate to the root logger to avoid duplicate messages
+    # if the root logger is also configured.
+    wordcel_logger.propagate = False
 
 
 def get_logger(name: str) -> logging.Logger:
