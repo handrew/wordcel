@@ -1,0 +1,47 @@
+# Example 2: Sentiment Analysis Pipeline
+# This pipeline loads text data and uses an LLM to analyze sentiment.
+#
+# Usage:
+#   wordcel dag execute examples/02_sentiment_analysis.yaml \
+#     -c INPUT_PATH=path/to/reviews.csv
+#
+# Expected CSV format:
+#   id,text
+#   1,"This product is amazing!"
+#   2,"Very disappointed with the quality."
+
+dag:
+  name: sentiment_analysis
+  executor:
+    type: parallel
+    max_workers: 4
+
+nodes:
+  # Load the input CSV with text data
+  - id: load_reviews
+    type: csv
+    path: "${INPUT_PATH}"
+
+  # Analyze sentiment using an LLM
+  - id: analyze_sentiment
+    type: llm
+    input: load_reviews
+    input_field: text
+    output_field: sentiment
+    template: |
+      Analyze the sentiment of the following text and respond with exactly one word:
+      POSITIVE, NEGATIVE, or NEUTRAL.
+
+      Text: {input}
+
+      Sentiment:
+    # Optional: specify a model
+    # model: openai/gpt-4o-mini
+
+  # Filter to show only negative reviews
+  - id: negative_reviews
+    type: dataframe_operation
+    input: analyze_sentiment
+    operation: query
+    args:
+      - "sentiment == 'NEGATIVE'"

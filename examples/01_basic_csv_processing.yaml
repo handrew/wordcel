@@ -1,0 +1,43 @@
+# Example 1: Basic CSV Processing Pipeline
+# This pipeline loads a CSV file, filters rows, and saves the result.
+#
+# Usage:
+#   wordcel dag execute examples/01_basic_csv_processing.yaml \
+#     -c INPUT_PATH=path/to/your/data.csv \
+#     -c OUTPUT_PATH=output/filtered_data.csv
+
+dag:
+  name: basic_csv_processing
+  executor:
+    type: sequential
+
+nodes:
+  # Load the input CSV file
+  - id: load_data
+    type: csv
+    path: "${INPUT_PATH}"
+
+  # Filter to keep only rows where a column meets criteria
+  - id: filter_data
+    type: dataframe_operation
+    input: load_data
+    operation: query
+    args:
+      - "score > 50"  # Adjust this filter as needed
+
+  # Select specific columns
+  - id: select_columns
+    type: dataframe_operation
+    input: filter_data
+    operation: filter
+    kwargs:
+      items:
+        - name
+        - score
+        - category
+
+  # Save the processed data
+  - id: save_output
+    type: file_writer
+    input: select_columns
+    path: "${OUTPUT_PATH}"

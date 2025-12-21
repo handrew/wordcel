@@ -1,15 +1,8 @@
 import os
 import pandas as pd
 import pytest
+from unittest.mock import patch
 from wordcel.featurize import apply_io_bound_function
-from wordcel.llms import llm_call
-from wordcel.config import DEFAULT_MODEL
-
-
-def sentiment_classify(text: str) -> str:
-    """Helper function for sentiment classification."""
-    prompt = f"Classify the sentiment of the following text into one of two categories, POS or NEG. Respond in one word only.\n\n{text}"
-    return llm_call(prompt, model=DEFAULT_MODEL, max_tokens=32)
 
 
 class TestFeaturize:
@@ -33,7 +26,15 @@ class TestFeaturize:
             shutil.rmtree(cache_folder)
 
     def test_apply_io_bound_function_basic(self):
-        """Test basic functionality of apply_io_bound_function."""
+        """Test basic functionality of apply_io_bound_function (mocked)."""
+        # Create a simple mock function
+        def mock_sentiment(text: str) -> str:
+            if "love" in text.lower() or "amazing" in text.lower() or "perfect" in text.lower():
+                return "POS"
+            elif "terrible" in text.lower() or "disappointed" in text.lower():
+                return "NEG"
+            return "NEG"
+
         # Sample data
         data = {
             "id": [1, 2, 3],
@@ -48,7 +49,7 @@ class TestFeaturize:
         # Apply the function
         results = apply_io_bound_function(
             df,
-            sentiment_classify,
+            mock_sentiment,
             text_column="text",
             num_threads=2,
             cache_folder="cache",
@@ -58,15 +59,20 @@ class TestFeaturize:
         assert isinstance(results, pd.Series)
         assert len(results) == 3
         assert all(isinstance(result, str) for result in results)
-        assert all(
-            result.strip() in ["POS", "NEG", "Positive", "Negative"]
-            or "pos" in result.lower()
-            or "neg" in result.lower()
-            for result in results
-        )
+        assert results.iloc[0] == "POS"
+        assert results.iloc[1] == "NEG"
+        assert results.iloc[2] == "POS"
 
     def test_apply_io_bound_function_with_dataframe_join(self):
-        """Test joining results back to original DataFrame."""
+        """Test joining results back to original DataFrame (mocked)."""
+        # Create a simple mock function
+        def mock_sentiment(text: str) -> str:
+            if "fantastic" in text.lower() or "recommend" in text.lower():
+                return "POS"
+            elif "bad" in text.lower():
+                return "NEG"
+            return "NEG"
+
         # Sample data
         data = {
             "id": [1, 2],
@@ -80,7 +86,7 @@ class TestFeaturize:
         # Apply the function
         results = apply_io_bound_function(
             df,
-            sentiment_classify,
+            mock_sentiment,
             text_column="text",
             num_threads=1,
             cache_folder="cache",
@@ -93,5 +99,5 @@ class TestFeaturize:
         assert "results" in df.columns
         assert len(df) == 2
         assert df["results"].notna().all()
-        assert isinstance(df["results"].iloc[0], str)
-        assert isinstance(df["results"].iloc[1], str)
+        assert df["results"].iloc[0] == "POS"
+        assert df["results"].iloc[1] == "NEG"

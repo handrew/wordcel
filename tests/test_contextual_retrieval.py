@@ -75,7 +75,10 @@ def test_indexing_and_save():
     assert os.path.exists("retriever.pkl")
 
 
-def test_load_and_retrieve():
+def test_load_and_retrieve(mock_llm_call):
+    """Test loading and retrieving from a saved retriever (mocked LLM)."""
+    mock_llm_call.return_value = "The capybara belongs to the genus Hydrochoerus."
+
     # Ensure we have a saved retriever first
     if not os.path.exists("retriever.pkl"):
         test_indexing_and_save()

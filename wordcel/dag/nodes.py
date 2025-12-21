@@ -14,7 +14,7 @@ import pandas as pd
 import logging
 import concurrent.futures
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Type, Callable, List, Union
+from typing import Dict, Any, Type, Callable, List, Union, Optional, Tuple
 from .default_functions import read_sql, llm_filter
 from ..config import DEFAULT_MODEL
 from ..logging_config import get_logger
@@ -23,21 +23,33 @@ log = get_logger("dag.nodes")
 
 
 class Node(ABC):
+    """Abstract base class for all DAG nodes.
+
+    Attributes:
+        input_spec: Specification for expected input types and description.
+        description: Human-readable description of what this node does.
+        config: Node configuration from YAML definition.
+        secrets: Dictionary of secret values (API keys, connection strings, etc.).
+        functions: Dictionary of callable functions available to this node.
+        runtime_config_params: Parameters substituted at runtime.
+    """
+
     input_spec: Dict[str, Any] = {
         "type": None,
         "description": "This node does not take any input.",
     }
+    description: str = "Base node class."
 
     def __init__(
         self,
         config: Dict[str, Any],
         secrets: Dict[str, str],
-        runtime_config_params=None,
-        custom_functions: Dict[str, Callable] = None,
-    ):
+        runtime_config_params: Optional[Dict[str, str]] = None,
+        custom_functions: Optional[Dict[str, Callable[..., Any]]] = None,
+    ) -> None:
         self.config = config
         self.secrets = secrets
-        self.functions = {}
+        self.functions: Dict[str, Callable[..., Any]] = {}
         self.runtime_config_params = runtime_config_params
         if custom_functions:
             self.functions.update(custom_functions)
@@ -63,72 +75,108 @@ class Node(ABC):
 
 
 class CSVNode(Node):
+    """Node to read a CSV file into a pandas DataFrame."""
+
     description = """Node to read a CSV file."""
-    input_spec = {"type": None, "description": "This node does not take any input."}
+    input_spec: Dict[str, Any] = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         path = os.path.expanduser(self.config["path"])
         if not os.path.exists(path) and not path.startswith(("http://", "https://")):
-            raise FileNotFoundError(f"CSV file not found: {path}")
+            raise FileNotFoundError(
+                f"CSV file not found: '{path}'. "
+                f"Please check that the file exists and the path is correct."
+            )
         return pd.read_csv(path)
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "CSVNode must have a 'path' configuration."
+        if "path" not in self.config:
+            raise ValueError(
+                f"CSVNode requires a 'path' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
         return True
 
 
 class YAMLNode(Node):
+    """Node to read a YAML file into a dictionary."""
+
     description = """Node to read a YAML file."""
-    input_spec = {"type": None, "description": "This node does not take any input."}
+    input_spec: Dict[str, Any] = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
         path = os.path.expanduser(self.config["path"])
         if not os.path.exists(path):
-            raise FileNotFoundError(f"YAML file not found: {path}")
+            raise FileNotFoundError(
+                f"YAML file not found: '{path}'. "
+                f"Please check that the file exists and the path is correct."
+            )
         with open(path, "r") as file:
             return yaml.safe_load(file)
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "YAMLNode must have a 'path' configuration."
+        if "path" not in self.config:
+            raise ValueError(
+                f"YAMLNode requires a 'path' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
         return True
 
 
 class JSONNode(Node):
+    """Node to read a JSON file into a dictionary."""
+
     description = """Node to read a JSON file."""
-    input_spec = {"type": None, "description": "This node does not take any input."}
+    input_spec: Dict[str, Any] = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> Dict[str, Any]:
         path = os.path.expanduser(self.config["path"])
         if not os.path.exists(path):
-            raise FileNotFoundError(f"JSON file not found: {path}")
+            raise FileNotFoundError(
+                f"JSON file not found: '{path}'. "
+                f"Please check that the file exists and the path is correct."
+            )
         with open(path, "r") as file:
             return json.load(file)
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "JSONNode must have a 'path' configuration."
+        if "path" not in self.config:
+            raise ValueError(
+                f"JSONNode requires a 'path' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
         return True
 
 
 class JSONDataFrameNode(Node):
+    """Node to read a JSON file into a pandas DataFrame."""
+
     description = """Node to read a JSON file into a pandas DataFrame."""
-    input_spec = {"type": None, "description": "This node does not take any input."}
+    input_spec: Dict[str, Any] = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         path = os.path.expanduser(self.config["path"])
         if not os.path.exists(path) and not path.startswith(("http://", "https://")):
-            raise FileNotFoundError(f"JSON file not found: {path}")
+            raise FileNotFoundError(
+                f"JSON file not found: '{path}'. "
+                f"Please check that the file exists and the path is correct."
+            )
         return pd.read_json(path, **self.config.get("read_json_kwargs", {}))
 
     def validate_config(self) -> bool:
-        assert (
-            "path" in self.config
-        ), "JSONDataFrameNode must have a 'path' configuration."
+        if "path" not in self.config:
+            raise ValueError(
+                f"JSONDataFrameNode requires a 'path' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
         return True
 
 
 class FileDirectoryNode(Node):
+    """Node to read text and markdown files from a directory or list of directories."""
+
     description = """Node to read text and markdown files from a directory or list of directories, supporting regex patterns."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (dict, type(None), list, pd.DataFrame, pd.Series),
         "description": "Optionally accepts a dictionary with a 'path' key (string or list of strings) to override the path in the config. Other input types are ignored, allowing this node to be used as a dependency.",
     }
@@ -137,13 +185,16 @@ class FileDirectoryNode(Node):
         paths = self.config.get("path")
         if isinstance(input_data, dict) and "path" in input_data:
             paths = input_data["path"]
-            assert (
-                "path" not in self.config
-            ), "FileDirectoryNode `path` cannot be in input data if it is in the configuration."
-            if isinstance(paths, list):
-                assert all(
-                    isinstance(path, str) for path in paths
-                ), "FileDirectoryNode `path` in input data must be a list of strings."
+            if "path" in self.config:
+                raise ValueError(
+                    "FileDirectoryNode configuration conflict: 'path' cannot be specified "
+                    "in both the config and input data. Remove one of them."
+                )
+            if isinstance(paths, list) and not all(isinstance(path, str) for path in paths):
+                raise TypeError(
+                    f"FileDirectoryNode 'path' in input data must be a list of strings. "
+                    f"Got types: {[type(p).__name__ for p in paths]}"
+                )
         elif input_data is not None and not isinstance(input_data, dict):
             log.info(
                 f"FileDirectoryNode received input of type {type(input_data).__name__} but expected a dict. "
@@ -155,7 +206,7 @@ class FileDirectoryNode(Node):
 
         paths = [os.path.expanduser(path) for path in paths]
 
-        file_contents = []
+        file_contents: List[Dict[str, str]] = []
         for path in paths:
             for file_path in glob.glob(path, recursive=True):
                 if file_path.lower().endswith((".txt", ".md", ".html")):
@@ -178,15 +229,19 @@ class FileDirectoryNode(Node):
     def validate_config(self) -> bool:
         if "path" in self.config:
             paths = self.config["path"]
-            assert isinstance(paths, str) or isinstance(
-                paths, list
-            ), "FileDirectoryNode 'path' must be a string or a list of strings."
+            if not isinstance(paths, (str, list)):
+                raise TypeError(
+                    f"FileDirectoryNode 'path' must be a string or a list of strings. "
+                    f"Got type: {type(paths).__name__}"
+                )
         return True
 
 
 class SQLNode(Node):
+    """Node to execute a SQL query and return results as a DataFrame."""
+
     description = """Node to execute a SQL query."""
-    input_spec = {"type": None, "description": "This node does not take any input."}
+    input_spec: Dict[str, Any] = {"type": None, "description": "This node does not take any input."}
 
     def execute(self, input_data: Any) -> pd.DataFrame:
         connection_string = self.secrets["database_url"]
@@ -194,23 +249,32 @@ class SQLNode(Node):
         return read_sql_fn(self.config["query"], connection_string)
 
     def validate_config(self) -> bool:
-        assert (
-            "query" in self.config and "database_url" in self.secrets
-        ), "SQLNode must have a 'query' configuration and a 'database_url' secret."
+        missing = []
+        if "query" not in self.config:
+            missing.append("'query' in config")
+        if "database_url" not in self.secrets:
+            missing.append("'database_url' in secrets")
+        if missing:
+            raise ValueError(
+                f"SQLNode is missing required configuration: {', '.join(missing)}. "
+                f"Config keys: {list(self.config.keys())}, Secret keys: {list(self.secrets.keys())}"
+            )
         return True
 
 
 class StringTemplateNode(Node):
+    """Node to apply a string template to input data."""
+
     description = """Node to apply a string template to input data. The
     `header`, if given, is placed at the top. The `template` is filled in
     at least once, and potentially many times depending on the input."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (dict, list, pd.DataFrame, str, type(None)),
         "description": "Accepts a dictionary for direct template substitution, or a list/DataFrame to iterate over. If a string is provided, it's substituted for '{input}'. Can also be run with no input.",
     }
 
     def execute(
-        self, input_data: Union[Dict[str, Any], List[Dict[str, Any]], pd.DataFrame]
+        self, input_data: Union[Dict[str, Any], List[Dict[str, Any]], pd.DataFrame, str, None]
     ) -> Union[str, List[str]]:
         template = Template(self.config["template"])
         mode = self.config.get("mode", "single")
@@ -224,7 +288,7 @@ class StringTemplateNode(Node):
             return_string = return_string + "\n\n"
 
         if isinstance(input_data, (list, pd.DataFrame)):
-            records = input_data
+            records: Union[List[Any], pd.DataFrame] = input_data
             if isinstance(input_data, pd.DataFrame):
                 records = input_data.to_dict(orient="records")
 
@@ -241,7 +305,7 @@ class StringTemplateNode(Node):
                             + "\n\n"
                         )
             elif mode == "multiple":  # List of strings output.
-                return_items = [
+                return_items: List[str] = [
                     (
                         template.safe_substitute(item)
                         if isinstance(item, dict)
@@ -259,22 +323,27 @@ class StringTemplateNode(Node):
 
         return return_string
 
-
     def validate_config(self) -> bool:
-        assert (
-            "template" in self.config
-        ), "StringTemplateNode must have a 'template' configuration."
+        if "template" not in self.config:
+            raise ValueError(
+                f"StringTemplateNode requires a 'template' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
         if "mode" in self.config:
-            modes_are_valid = self.config["mode"] in ["single", "multiple"]
-            assert (
-                modes_are_valid
-            ), "StringTemplateNode `mode` must be `single` or `multiple`."
+            valid_modes = ["single", "multiple"]
+            if self.config["mode"] not in valid_modes:
+                raise ValueError(
+                    f"StringTemplateNode 'mode' must be one of {valid_modes}. "
+                    f"Got: '{self.config['mode']}'"
+                )
         return True
 
 
 class StringConcatNode(Node):
+    """Node to concatenate strings from multiple inputs with optional separator and prefix/suffix."""
+
     description = """Node to concatenate strings from multiple inputs with optional separator and prefix/suffix."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (str, list, pd.DataFrame, pd.Series),
         "description": "Accepts a string, a list of strings, or a pandas DataFrame/Series to concatenate.",
     }
@@ -283,27 +352,36 @@ class StringConcatNode(Node):
         self, input_data: Union[str, List[str], pd.DataFrame, pd.Series]
     ) -> str:
         # Get configuration parameters with defaults
-        separator = self.config.get("separator", " ")
-        prefix = self.config.get("prefix", "")
-        suffix = self.config.get("suffix", "")
+        separator: str = self.config.get("separator", " ")
+        prefix: str = self.config.get("prefix", "")
+        suffix: str = self.config.get("suffix", "")
 
         # Handle different input types
+        strings: List[str]
         if isinstance(input_data, str):
             strings = [input_data]
         elif isinstance(input_data, list):
-            if all(isinstance(x, str) for x in input_data):
-                strings = input_data
-            else:
-                raise ValueError("All elements in input list must be strings")
+            if not all(isinstance(x, str) for x in input_data):
+                non_strings = [(i, type(x).__name__) for i, x in enumerate(input_data) if not isinstance(x, str)]
+                raise TypeError(
+                    f"StringConcatNode requires all elements in input list to be strings. "
+                    f"Found non-string elements at indices: {non_strings[:5]}{'...' if len(non_strings) > 5 else ''}"
+                )
+            strings = input_data
         elif isinstance(input_data, pd.DataFrame):
-            assert (
-                "column" in self.config
-            ), "Must specify 'column' in config when input is a DataFrame"
+            if "column" not in self.config:
+                raise ValueError(
+                    f"StringConcatNode requires 'column' in config when input is a DataFrame. "
+                    f"Available columns: {list(input_data.columns)}"
+                )
             strings = input_data[self.config["column"]].tolist()
         elif isinstance(input_data, pd.Series):
             strings = input_data.tolist()
         else:
-            raise ValueError(f"Unsupported input type: {type(input_data)}")
+            raise TypeError(
+                f"StringConcatNode received unsupported input type: {type(input_data).__name__}. "
+                f"Expected: str, list, DataFrame, or Series."
+            )
 
         # Filter out None values and convert all elements to strings
         strings = [str(s) for s in strings if s is not None]
@@ -314,30 +392,30 @@ class StringConcatNode(Node):
         return result
 
     def validate_config(self) -> bool:
-        # All config parameters are optional
-        if "separator" in self.config:
-            assert isinstance(
-                self.config["separator"], str
-            ), "separator must be a string"
-        if "prefix" in self.config:
-            assert isinstance(self.config["prefix"], str), "prefix must be a string"
-        if "suffix" in self.config:
-            assert isinstance(self.config["suffix"], str), "suffix must be a string"
+        # All config parameters are optional but must be correct type if present
+        for param in ["separator", "prefix", "suffix"]:
+            if param in self.config and not isinstance(self.config[param], str):
+                raise TypeError(
+                    f"StringConcatNode '{param}' must be a string. "
+                    f"Got type: {type(self.config[param]).__name__}"
+                )
         return True
 
 
 class LLMNode(Node):
+    """Node to query an LLM API with a template."""
+
     description = """Node to query an LLM API with a template. Template must
     contain "{input}" in order to substitute something in. If given a string,
     it will fill in the template and return the result. If given a DataFrame
     or list of dicts, it will turn the column / field denoted by `input_field`
     into a list of strings, fill in the template for each string."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (str, list, pd.DataFrame, pd.Series, dict),
         "description": "Accepts a string, list of strings, dict, or a pandas DataFrame/Series. The 'input_field' config is required for structured data (dict, DataFrame).",
     }
 
-    def _try_to_load_as_json(self, text: str) -> Union[str, dict]:
+    def _try_to_load_as_json(self, text: str) -> Union[str, Dict[str, Any]]:
         """Attempt to parse text as JSON, returning original text if parsing fails.
 
         Args:
@@ -352,19 +430,22 @@ class LLMNode(Node):
             return text
 
     def execute(
-        self, input_data: Union[str, List[str], pd.DataFrame]
-    ) -> Union[str, List[str]]:
+        self, input_data: Union[str, List[str], pd.DataFrame, pd.Series, Dict[str, Any]]
+    ) -> Union[str, List[str], pd.DataFrame, List[Dict[str, Any]]]:
         llm_call = self.functions["llm_call"]
-        num_threads = self.config.get("num_threads", 1)
-        assert num_threads >= 1, "Number of threads must be at least 1."
-        model = self.config.get("model", DEFAULT_MODEL)
-        web_search_options = self.config.get("web_search_options")
+        num_threads: int = self.config.get("num_threads", 1)
+        if num_threads < 1:
+            raise ValueError(
+                f"LLMNode 'num_threads' must be at least 1. Got: {num_threads}"
+            )
+        model: str = self.config.get("model", DEFAULT_MODEL)
+        web_search_options: Optional[Dict[str, Any]] = self.config.get("web_search_options")
 
         if num_threads > 1:
             log.info(f"Using {num_threads} threads for LLM Node.")
 
         # Prepare llm_call parameters
-        llm_params = {"model": model}
+        llm_params: Dict[str, Any] = {"model": model}
         if web_search_options:
             llm_params["web_search_options"] = web_search_options
 
@@ -376,9 +457,11 @@ class LLMNode(Node):
             return self._try_to_load_as_json(response)
         # If it is a single dict, call the LLM once.
         elif isinstance(input_data, dict):
-            assert (
-                "input_field" in self.config
-            ), "LLMNode must have a `input_field` configuration if given a dict."
+            if "input_field" not in self.config:
+                raise ValueError(
+                    f"LLMNode requires 'input_field' configuration when input is a dict. "
+                    f"Available keys in input: {list(input_data.keys())}"
+                )
             response = llm_call(
                 self.config["template"].format(
                     input=input_data[self.config["input_field"]]
@@ -388,12 +471,16 @@ class LLMNode(Node):
             return self._try_to_load_as_json(response)
 
         # Turn input_data into a list of strings.
+        texts: List[str]
+        is_all_strings = False
+        is_all_dicts = False
+
         if isinstance(input_data, pd.DataFrame):
-            # Assert that `input_field` is in the configuration.
-            assert (
-                "input_field" in self.config
-            ), "LLMNode must have a `input_field` configuration for DataFrame or list of dicts."
-            # Turn it into a list of strings.
+            if "input_field" not in self.config:
+                raise ValueError(
+                    f"LLMNode requires 'input_field' configuration for DataFrame input. "
+                    f"Available columns: {list(input_data.columns)}"
+                )
             texts = input_data[self.config["input_field"]].tolist()
         elif isinstance(input_data, pd.Series):
             texts = input_data.tolist()
@@ -404,20 +491,28 @@ class LLMNode(Node):
                 isinstance(item, pd.DataFrame) for item in input_data
             )
 
-            assert (
-                is_all_strings or is_all_dicts or is_all_dataframes
-            ), "LLMNode input must be a list of strings, dicts, or DataFrames."
+            if not (is_all_strings or is_all_dicts or is_all_dataframes):
+                types_found = set(type(item).__name__ for item in input_data)
+                raise TypeError(
+                    f"LLMNode input list must contain all strings, all dicts, or all DataFrames. "
+                    f"Found mixed types: {types_found}"
+                )
             if is_all_strings:
                 texts = input_data
             elif is_all_dicts:
                 texts = [item[self.config["input_field"]] for item in input_data]
             else:
-                assert (
-                    "input_field" in self.config
-                ), "LLMNode must have a `input_field` configuration for list of DataFrames."
+                if "input_field" not in self.config:
+                    raise ValueError(
+                        "LLMNode requires 'input_field' configuration for list of DataFrames."
+                    )
                 texts = []
                 for df in input_data:
                     texts.extend(df[self.config["input_field"]].tolist())
+        else:
+            raise TypeError(
+                f"LLMNode received unexpected input type: {type(input_data).__name__}"
+            )
 
         # Call the LLM in parallel.
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
@@ -447,7 +542,7 @@ class LLMNode(Node):
                     for item, result in zip(input_data, results)
                 ]
             else:  # Case: list of DataFrames.
-                dfs = []
+                dfs: List[pd.DataFrame] = []
                 for df in input_data:
                     new_df = df.copy()
                     new_df.loc[:, self.config["output_field"]] = results[: len(df)]
@@ -455,39 +550,58 @@ class LLMNode(Node):
                     dfs.append(df)
                 return dfs
 
+        return results
+
     def validate_config(self) -> bool:
-        assert (
-            "template" in self.config
-        ), "LLMNode must have a 'template' configuration."
-        assert "input" in self.config, "LLMNode must have an 'input' configuration."
-        assert (
-            "{input}" in self.config["template"]
-        ), "LLMNode template must contain '{input}'."
+        missing = []
+        if "template" not in self.config:
+            missing.append("'template'")
+        if "input" not in self.config:
+            missing.append("'input'")
+        if missing:
+            raise ValueError(
+                f"LLMNode is missing required configuration: {', '.join(missing)}. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
+
+        if "{input}" not in self.config["template"]:
+            raise ValueError(
+                f"LLMNode template must contain '{{input}}' placeholder. "
+                f"Template preview: '{self.config['template'][:100]}...'"
+            )
 
         # If `input_field` in the configuration, then there must also be an `output_field`.
-        if "input_field" in self.config:
-            assert (
-                "output_field" in self.config
-            ), "LLMNode must have an `output_field` configuration if `input_field` is present."
-        
+        if "input_field" in self.config and "output_field" not in self.config:
+            raise ValueError(
+                "LLMNode requires 'output_field' configuration when 'input_field' is specified. "
+                "The output_field specifies where to store LLM results in the output DataFrame/dict."
+            )
+
         if "web_search_options" in self.config:
-            assert isinstance(
-                self.config["web_search_options"], dict
-            ), "LLMNode `web_search_options` must be a dictionary."
+            if not isinstance(self.config["web_search_options"], dict):
+                raise TypeError(
+                    f"LLMNode 'web_search_options' must be a dictionary. "
+                    f"Got type: {type(self.config['web_search_options']).__name__}"
+                )
         return True
 
 
 class LLMFilterNode(Node):
+    """Node to use LLMs to filter a DataFrame based on a prompt."""
+
     description = """Node to use LLMs to filter a dataframe."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": pd.DataFrame,
         "description": "Requires a pandas DataFrame as input.",
     }
 
     def execute(self, input_data: pd.DataFrame) -> Union[pd.DataFrame, pd.Series]:
-        model = self.config.get("model", DEFAULT_MODEL)
-        num_threads = self.config.get("num_threads", 1)
-        assert num_threads >= 1, "Number of threads must be at least 1."
+        model: str = self.config.get("model", DEFAULT_MODEL)
+        num_threads: int = self.config.get("num_threads", 1)
+        if num_threads < 1:
+            raise ValueError(
+                f"LLMFilterNode 'num_threads' must be at least 1. Got: {num_threads}"
+            )
         if num_threads > 1:
             log.info(f"Using {num_threads} threads for LLMFilter Node.")
 
@@ -501,118 +615,168 @@ class LLMFilterNode(Node):
         )
 
     def validate_config(self) -> bool:
-        assert (
-            "column" in self.config and "prompt" in self.config
-        ), "LLMFilterNode must have 'column' and 'prompt' configuration."
-        assert (
-            "input" in self.config
-        ), "LLMFilterNode must have an 'input' configuration."
-        assert isinstance(
-            self.config["input"], str
-        ), "LLMFilter node 'input' configuration must have only one input."
+        missing = []
+        if "column" not in self.config:
+            missing.append("'column'")
+        if "prompt" not in self.config:
+            missing.append("'prompt'")
+        if "input" not in self.config:
+            missing.append("'input'")
+        if missing:
+            raise ValueError(
+                f"LLMFilterNode is missing required configuration: {', '.join(missing)}. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
+
+        if not isinstance(self.config["input"], str):
+            raise TypeError(
+                f"LLMFilterNode 'input' must be a single string (node ID), not a list. "
+                f"Got type: {type(self.config['input']).__name__}"
+            )
         return True
 
 
 class FileWriterNode(Node):
+    """Node to write data to a file."""
+
     description = """Node to write data to a file."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (str, list),
         "description": "Accepts a string to write to a single file, or a list of strings to write to multiple files (in 'multiple' mode).",
     }
 
-    def execute(self, input_data: str) -> str:
-        mode = self.config.get("mode", "single")
+    def execute(self, input_data: Union[str, List[str]]) -> Optional[str]:
+        mode: str = self.config.get("mode", "single")
         if mode == "single":
             path = os.path.expanduser(self.config["path"])
             with open(path, "w") as file:
                 file.write(str(input_data))
+            return path
         elif mode == "multiple":
+            if not isinstance(input_data, list):
+                raise TypeError(
+                    f"FileWriterNode in 'multiple' mode requires a list input. "
+                    f"Got type: {type(input_data).__name__}"
+                )
+            paths_written: List[str] = []
             for i, data in enumerate(input_data):
                 path = os.path.expanduser(self.config["path"].format(i=i))
                 with open(path, "w") as file:
                     file.write(str(data))
+                paths_written.append(path)
+            return None
+        return None
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "FileWriterNode must have a 'path' configuration."
+        if "path" not in self.config:
+            raise ValueError(
+                f"FileWriterNode requires a 'path' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
         if "mode" in self.config:
-            modes_are_allowed = self.config["mode"] in ["single", "multiple"]
-            assert (
-                modes_are_allowed
-            ), "FileWriterNode `mode` must be `single` or `multiple`."
-
-            if self.config["mode"] == "multiple":
-                assert (
-                    "{i}" in self.config["path"]
-                ), 'FileWriterNode `path` must contain "{i}" to format for `multiple` mode.'
+            valid_modes = ["single", "multiple"]
+            if self.config["mode"] not in valid_modes:
+                raise ValueError(
+                    f"FileWriterNode 'mode' must be one of {valid_modes}. "
+                    f"Got: '{self.config['mode']}'"
+                )
+            if self.config["mode"] == "multiple" and "{i}" not in self.config["path"]:
+                raise ValueError(
+                    f"FileWriterNode in 'multiple' mode requires '{{i}}' placeholder in path. "
+                    f"Got path: '{self.config['path']}'"
+                )
         return True
 
 
 class DataFrameOperationNode(Node):
+    """Node to apply a DataFrame operation to the input data."""
+
     description = """Node to apply a DataFrame operation to the input data."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (pd.DataFrame, list),
         "description": "Accepts a single DataFrame or a list of DataFrames for operations like 'concat' or 'merge'.",
     }
 
-    def execute(self, input_data: Union[pd.DataFrame, List]) -> pd.DataFrame:
+    def execute(self, input_data: Union[pd.DataFrame, List[Any]]) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         if not isinstance(input_data, list):
             input_data = [input_data]
         return self._apply_operation(input_data)
 
-    def __handle_dataframe_method(
-        self, df: pd.DataFrame, operation: str, *args, **kwargs
-    ) -> pd.DataFrame:
+    def _handle_dataframe_method(
+        self, df: pd.DataFrame, operation: str, *args: Any, **kwargs: Any
+    ) -> Any:
         """Handle DataFrame methods."""
         if hasattr(df, operation):
             method = getattr(df, operation)
             if callable(method):
                 try:
                     return method(*args, **kwargs)
-                except TypeError:
+                except TypeError as e:
                     raise TypeError(
-                        f"Error calling method {operation} with args {args} and kwargs {kwargs}."
+                        f"Error calling DataFrame method '{operation}' with args={args}, kwargs={kwargs}. "
+                        f"Original error: {e}"
                     )
             else:
                 return method
         else:
-            raise ValueError(f"Unknown DataFrame operation: {operation}")
+            raise ValueError(
+                f"Unknown DataFrame operation: '{operation}'. "
+                f"This is not a valid pandas DataFrame method."
+            )
 
-    def _apply_operation(self, input_array: List) -> pd.DataFrame:
-        operation = self.config["operation"]
-        args = self.config.get("args", [])
-        kwargs = self.config.get("kwargs", {})
+    def _apply_operation(self, input_array: List[Any]) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+        operation: str = self.config["operation"]
+        args: List[Any] = self.config.get("args", [])
+        kwargs: Dict[str, Any] = self.config.get("kwargs", {})
 
         every_element_is_dataframe = all(
             isinstance(df, pd.DataFrame) for df in input_array
         )
 
         if operation == "concat":
-            assert every_element_is_dataframe, "All inputs must be DataFrames."
+            if not every_element_is_dataframe:
+                types_found = [type(x).__name__ for x in input_array]
+                raise TypeError(
+                    f"DataFrameOperationNode 'concat' requires all inputs to be DataFrames. "
+                    f"Got types: {types_found}"
+                )
             return pd.concat(input_array, **kwargs)
         elif operation == "merge":
-            assert (
-                len(input_array) == 2
-            ), "Merge operation requires exactly two DataFrames."
-            assert every_element_is_dataframe, "All inputs must be DataFrames."
+            if len(input_array) != 2:
+                raise ValueError(
+                    f"DataFrameOperationNode 'merge' requires exactly 2 DataFrames. "
+                    f"Got {len(input_array)} inputs."
+                )
+            if not every_element_is_dataframe:
+                types_found = [type(x).__name__ for x in input_array]
+                raise TypeError(
+                    f"DataFrameOperationNode 'merge' requires all inputs to be DataFrames. "
+                    f"Got types: {types_found}"
+                )
             return pd.merge(input_array[0], input_array[1], **kwargs)
         elif operation == "set_column":
-            # Assert that one input is a DataFrame and the other is a string, list, or Series.
-            assert (
-                len(input_array) == 2
-            ), "`set_column` operation requires exactly two inputs."
-            assert isinstance(
-                input_array[0], pd.DataFrame
-            ), "First input must be a DataFrame."
-            assert isinstance(
-                input_array[1], (str, list, pd.Series)
-            ), "Second input must be a string, list, or Series."
+            if len(input_array) != 2:
+                raise ValueError(
+                    f"DataFrameOperationNode 'set_column' requires exactly 2 inputs "
+                    f"(DataFrame and column values). Got {len(input_array)} inputs."
+                )
+            if not isinstance(input_array[0], pd.DataFrame):
+                raise TypeError(
+                    f"DataFrameOperationNode 'set_column' requires first input to be a DataFrame. "
+                    f"Got type: {type(input_array[0]).__name__}"
+                )
+            if not isinstance(input_array[1], (str, list, pd.Series)):
+                raise TypeError(
+                    f"DataFrameOperationNode 'set_column' requires second input to be a string, list, or Series. "
+                    f"Got type: {type(input_array[1]).__name__}"
+                )
             df = input_array[0]
             df.loc[:, self.config["column_name"]] = input_array[1]
             return df
         else:
             # Apply the operation to each DataFrame.
             completed = [
-                self.__handle_dataframe_method(df, operation, *args, **kwargs)
+                self._handle_dataframe_method(df, operation, *args, **kwargs)
                 for df in input_array
             ]
             if len(completed) == 1:
@@ -620,46 +784,52 @@ class DataFrameOperationNode(Node):
             return completed
 
     def validate_config(self) -> bool:
-        assert (
-            "operation" in self.config
-        ), "DataFrameOperationNode must have an `operation` configuration."
-        if self.config["operation"] == "set_column":
-            assert (
-                "column_name" in self.config
-            ), "DataFrameOperationNode with `set_column` operation must have a `column_name` configuration."
+        if "operation" not in self.config:
+            raise ValueError(
+                f"DataFrameOperationNode requires an 'operation' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
+        if self.config["operation"] == "set_column" and "column_name" not in self.config:
+            raise ValueError(
+                "DataFrameOperationNode with 'set_column' operation requires a 'column_name' configuration."
+            )
         return True
 
 
 class PythonScriptNode(Node):
+    """Node to execute a Python script using subprocess."""
+
     description = """Node to execute a Python script using subprocess."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (str, int, float, complex, bool, list, pd.Series, pd.DataFrame, type(None)),
         "description": "Accepts a primitive type, a list, a pandas Series, or a pandas DataFrame to be passed as a command-line argument to the script. Can also be run with no input.",
     }
 
     def execute(self, input_data: Any) -> Any:
+        items_to_process: List[Any]
         if input_data is not None:
             if isinstance(input_data, pd.DataFrame):
-                input_data = input_data.to_records(index=False).tolist()
+                items_to_process = input_data.to_records(index=False).tolist()
             elif isinstance(input_data, pd.Series):
-                input_data = input_data.tolist()
+                items_to_process = input_data.tolist()
             elif isinstance(input_data, (str, int, float, complex, bool)):
-                input_data = [input_data]
+                items_to_process = [input_data]
             elif isinstance(input_data, list):
-                input_data = input_data
+                items_to_process = input_data
             else:
-                raise ValueError(
-                    "Input data must be a primitive, list, pandas Series, or pandas DataFrame."
+                raise TypeError(
+                    f"PythonScriptNode received unsupported input type: {type(input_data).__name__}. "
+                    f"Expected: primitive, list, pandas Series, or pandas DataFrame."
                 )
         else:
             # None if no input data, so that it runs once and appends
             # nothing to the command.
-            input_data = [None]
+            items_to_process = [None]
 
         # Prepare the command.
         script_path = shlex.quote(self.config["script_path"])
-        args = self.config.get("args", [])
-        command = ["python", script_path]
+        args: List[Any] = self.config.get("args", [])
+        command: List[str] = ["python", script_path]
         if args:
             # Add args from YAML config.
             for arg in args:
@@ -670,8 +840,8 @@ class PythonScriptNode(Node):
                     command.append(shlex.quote(str(arg)))
 
         # Prepare the results list and execute the script.
-        results = []
-        for item in input_data:
+        results: List[Any] = []
+        for item in items_to_process:
             cmd = command.copy()
             if item is not None:
                 cmd.append(shlex.quote(str(item)))
@@ -680,34 +850,43 @@ class PythonScriptNode(Node):
             log.info("Attempting to execute command: " + shlex.join(cmd))
             try:
                 subprocess_result = subprocess.run(
-                    cmd, shell=False, stdout=subprocess.PIPE
+                    cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 )
             except subprocess.CalledProcessError as e:
-                raise RuntimeError(f"Script execution failed: {e.stderr}")
+                raise RuntimeError(
+                    f"PythonScriptNode failed to execute script '{self.config['script_path']}'. "
+                    f"Error: {e.stderr}"
+                )
 
             # Handle output.
             output_file_key = "return_output_file"
             return_stdout_key = "return_stdout"
             if output_file_key in self.config:
-                assert self.config[output_file_key].endswith(
-                    (".csv", ".json")
-                ), f"{output_file_key} must be a csv or json file."
+                output_file = self.config[output_file_key]
+                if not output_file.endswith((".csv", ".json")):
+                    raise ValueError(
+                        f"PythonScriptNode 'return_output_file' must be a .csv or .json file. "
+                        f"Got: '{output_file}'"
+                    )
 
                 # Read the file and return the result.
-                if self.config[output_file_key].endswith(".csv"):
-                    result = pd.read_csv(self.config[output_file_key])
+                if output_file.endswith(".csv"):
+                    result = pd.read_csv(output_file)
                     results.append(result)
-                elif self.config[output_file_key].endswith(".json"):
-                    with open(self.config[output_file_key], "r") as file:
+                elif output_file.endswith(".json"):
+                    with open(output_file, "r") as file:
                         result = json.load(file)
                         results.append(result)
             elif return_stdout_key in self.config and self.config[return_stdout_key]:
                 result = subprocess_result.stdout.decode("utf-8").strip()
                 try:
                     result = ast.literal_eval(result)
-                except ValueError:
+                except (ValueError, SyntaxError) as e:
                     raise ValueError(
-                        f"Could not properly eval the `stdout` of the PythonScriptNode output for command: {cmd}. Please make sure you are printing out well-formed JSON."
+                        f"PythonScriptNode could not parse stdout as Python literal. "
+                        f"Command: {shlex.join(cmd)}. "
+                        f"stdout: '{result[:200]}...'. "
+                        f"Error: {e}"
                     )
                 results.append(result)
 
@@ -717,46 +896,53 @@ class PythonScriptNode(Node):
         return results
 
     def validate_config(self) -> bool:
-        assert (
-            "script_path" in self.config
-        ), "PythonScript node must have a `script_path` configuration."
-        assert os.path.exists(
-            self.config["script_path"]
-        ), "PythonScript node `script_path` does not exist."
-        # Assert that only one of output_file or return_stdout is present, but not both.
+        if "script_path" not in self.config:
+            raise ValueError(
+                f"PythonScriptNode requires a 'script_path' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
+        if not os.path.exists(self.config["script_path"]):
+            raise FileNotFoundError(
+                f"PythonScriptNode script not found: '{self.config['script_path']}'. "
+                f"Please check the path is correct."
+            )
+        # Validate that only one of output_file or return_stdout is present, but not both.
         has_output_file = "return_output_file" in self.config
         has_return_stdout = "return_stdout" in self.config
-        not_both = has_output_file != has_return_stdout
-        neither = not has_output_file and not has_return_stdout
-        assert (
-            not_both or neither
-        ), "PythonScript node must have either `output_file` or `return_stdout` configuration, or neither."
+        if has_output_file and has_return_stdout:
+            raise ValueError(
+                "PythonScriptNode cannot have both 'return_output_file' and 'return_stdout'. "
+                "Choose one method to capture output."
+            )
         return True
 
 
 class PythonFunctionNode(Node):
+    """Node to execute a specific Python function using a dotted path."""
+
     description = """Node to execute a specific Python function using a dotted path.
     Supports two modes:
     - 'single': passes the entire input as a single argument
     - 'multiple': iterates through input data (list, Series, DataFrame column) and calls function for each item
-    
+
     Function path should be in the format: package.module.function_name or local.module.function_name."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (str, int, float, complex, bool, list, dict, pd.DataFrame, pd.Series, type(None)),
         "description": "Accepts various data types. The data is passed as an argument to the specified function. Behavior is controlled by 'mode' and 'input_kwarg'.",
     }
 
     def execute(self, input_data: Any) -> Any:
         # Get the function using the dotted path
-        function_path = self.config["function_path"]
-        mode = self.config.get("mode", "single")
+        function_path: str = self.config["function_path"]
+        mode: str = self.config.get("mode", "single")
 
         # Split the path into module path and function name
         try:
             module_path, function_name = function_path.rsplit(".", 1)
         except ValueError:
             raise ValueError(
-                f"Invalid function path: {function_path}. Must be in the format `package.module.function_name` or `local.module.function_name`."
+                f"PythonFunctionNode invalid function path: '{function_path}'. "
+                f"Must be in format 'package.module.function_name' (e.g., 'json.dumps' or 'mymodule.process_data')."
             )
 
         # Temporarily add current directory to Python path to support local imports
@@ -765,18 +951,27 @@ class PythonFunctionNode(Node):
 
         try:
             # Import the module
-            module = importlib.import_module(module_path)
+            try:
+                module = importlib.import_module(module_path)
+            except ModuleNotFoundError as e:
+                raise ModuleNotFoundError(
+                    f"PythonFunctionNode could not import module '{module_path}'. "
+                    f"Make sure the module is installed or available in the current directory. "
+                    f"Original error: {e}"
+                )
 
             # Get the function from the module
             if not hasattr(module, function_name):
-                raise ValueError(
-                    f"Function `{function_name}` not found in module `{module_path}`."
+                available = [attr for attr in dir(module) if not attr.startswith("_")]
+                raise AttributeError(
+                    f"PythonFunctionNode: function '{function_name}' not found in module '{module_path}'. "
+                    f"Available attributes: {available[:10]}{'...' if len(available) > 10 else ''}"
                 )
-            function = getattr(module, function_name)
+            function: Callable[..., Any] = getattr(module, function_name)
 
             # Prepare arguments
-            args = self.config.get("args", [])
-            kwargs = self.config.get("kwargs", {})
+            args: List[Any] = list(self.config.get("args", []))
+            kwargs: Dict[str, Any] = dict(self.config.get("kwargs", {}))
 
             if mode == "single":
                 # Handle input data if provided (single mode)
@@ -790,26 +985,31 @@ class PythonFunctionNode(Node):
             elif mode == "multiple":
                 # Handle different types of input data for multiple mode
                 if input_data is None:
-                    raise ValueError("Input data cannot be None in `multiple` mode.")
+                    raise ValueError(
+                        "PythonFunctionNode in 'multiple' mode requires non-None input data."
+                    )
 
                 # Convert input_data to a list of items to process
+                items: List[Any]
                 if isinstance(input_data, pd.DataFrame):
                     if "input_field" not in self.config:
                         raise ValueError(
-                            "`input_field` must be specified in config when using DataFrame input in `multiple` mode."
+                            f"PythonFunctionNode requires 'input_field' in config when using DataFrame input in 'multiple' mode. "
+                            f"Available columns: {list(input_data.columns)}"
                         )
                     items = input_data[self.config["input_field"]].tolist()
                 elif isinstance(input_data, pd.Series):
                     items = input_data.tolist()
                 elif isinstance(input_data, (list, tuple)):
-                    items = input_data
+                    items = list(input_data)
                 else:
-                    raise ValueError(
-                        f"Input type `{type(input_data)}` not supported in `multiple` mode."
+                    raise TypeError(
+                        f"PythonFunctionNode in 'multiple' mode received unsupported input type: {type(input_data).__name__}. "
+                        f"Expected: DataFrame, Series, list, or tuple."
                     )
 
                 # Process each item
-                results = []
+                results: List[Any] = []
                 for item in items:
                     item_args = args.copy()
                     item_kwargs = kwargs.copy()
@@ -832,7 +1032,7 @@ class PythonFunctionNode(Node):
 
             else:
                 raise ValueError(
-                    f"Unknown mode: {mode}. Must be `single` or `multiple`."
+                    f"PythonFunctionNode 'mode' must be 'single' or 'multiple'. Got: '{mode}'"
                 )
 
         finally:
@@ -840,27 +1040,33 @@ class PythonFunctionNode(Node):
             sys.path.remove(cwd)
 
     def validate_config(self) -> bool:
-        assert (
-            "function_path" in self.config
-        ), "PythonFunctionNode must have a `function_path` configuration."
+        if "function_path" not in self.config:
+            raise ValueError(
+                f"PythonFunctionNode requires a 'function_path' configuration. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
 
         if "mode" in self.config:
-            assert self.config["mode"] in [
-                "single",
-                "multiple",
-            ], "Mode must be either `single` or `multiple`."
+            valid_modes = ["single", "multiple"]
+            if self.config["mode"] not in valid_modes:
+                raise ValueError(
+                    f"PythonFunctionNode 'mode' must be one of {valid_modes}. "
+                    f"Got: '{self.config['mode']}'"
+                )
 
         return True
 
 
 class DAGNode(Node):
+    """Node to execute a sub-DAG defined in a YAML file."""
+
     description = """Node to execute a sub-DAG defined in a YAML file."""
-    input_spec = {
+    input_spec: Dict[str, Any] = {
         "type": (dict, pd.DataFrame, type(None)),
         "description": "Accepts a dictionary where keys are node IDs in the sub-DAG to receive input, or a DataFrame. Can also be run with no input.",
     }
 
-    def execute(self, input_data: Union[Dict[str, Any], pd.DataFrame]) -> Any:
+    def execute(self, input_data: Union[Dict[str, Any], pd.DataFrame, None]) -> Any:
         from .dag import WordcelDAG
 
         # Ensure that the custom_functions don't override the default
@@ -873,7 +1079,7 @@ class DAGNode(Node):
 
         # Construct the runtime_config_params. Check for conflicts between
         # the DAG instantiation, the YAML definition.
-        runtime_config_params = {}
+        runtime_config_params: Dict[str, Any] = {}
         if self.runtime_config_params:  # From DAG instantiation in code.
             runtime_config_params = self.runtime_config_params.copy()
         if "runtime_config_params" in self.config:  # From the user.
@@ -881,9 +1087,11 @@ class DAGNode(Node):
             conflicts = set(self.config["runtime_config_params"].keys()).intersection(
                 runtime_config_params.keys()
             )
-            assert (
-                not conflicts
-            ), f"Runtime config params conflict between DAG instantiation and YAML definition: {conflicts}."
+            if conflicts:
+                raise ValueError(
+                    f"DAGNode runtime_config_params conflict between DAG instantiation and YAML definition. "
+                    f"Conflicting keys: {conflicts}"
+                )
 
             # If `from_input_data` is in the runtime_config_params, then
             # we need to get the value from the input_data.
@@ -891,9 +1099,9 @@ class DAGNode(Node):
                 input_data_key = self.config["runtime_config_params"]["from_input_data"]
                 # If it's not present in the input_data, then assume that the user
                 # wants to pass the entire input_data.
-                if input_data_key not in input_data:
+                if input_data is None or (isinstance(input_data, dict) and input_data_key not in input_data):
                     runtime_config_params[input_data_key] = input_data
-                else:
+                elif isinstance(input_data, dict):
                     runtime_config_params[input_data_key] = input_data[input_data_key]
 
             runtime_config_params.update(self.config["runtime_config_params"])
@@ -901,9 +1109,10 @@ class DAGNode(Node):
         # Check for `input_nodes` in the configuration.
         # It should be a list of `node_id`s where the input data should be
         # passed to the sub-DAG.
-        mapped_input = {}
+        mapped_input: Union[Dict[str, Any], pd.DataFrame, None]
         if "input_nodes" in self.config:
-            input_nodes = self.config["input_nodes"]
+            input_nodes: List[str] = self.config["input_nodes"]
+            mapped_input = {}
             for node_id in input_nodes:
                 mapped_input[node_id] = input_data
         else:
@@ -929,17 +1138,24 @@ class DAGNode(Node):
             elif isinstance(output_keys, str):
                 return dag_results[output_keys]
             else:
-                raise ValueError(
-                    f"DAGNOde `output_key` must be a string or a list of strings."
+                raise TypeError(
+                    f"DAGNode 'output_key' must be a string or a list of strings. "
+                    f"Got type: {type(output_keys).__name__}"
                 )
         return dag_results
 
     def validate_config(self) -> bool:
-        assert "path" in self.config, "DAGNode must have a 'path' configuration."
+        if "path" not in self.config:
+            raise ValueError(
+                f"DAGNode requires a 'path' configuration pointing to the sub-DAG YAML file. "
+                f"Got config keys: {list(self.config.keys())}"
+            )
         if "input_nodes" in self.config:
-            assert isinstance(
-                self.config["input_nodes"], list
-            ), "DAGNode `input_nodes` must be a list."
+            if not isinstance(self.config["input_nodes"], list):
+                raise TypeError(
+                    f"DAGNode 'input_nodes' must be a list of node IDs. "
+                    f"Got type: {type(self.config['input_nodes']).__name__}"
+                )
         return True
 
 
@@ -963,17 +1179,27 @@ NODE_TYPES: Dict[str, Type[Node]] = {
 
 
 class NodeRegistry:
-    _registry = {}
+    """Registry for node types, supporting custom node registration."""
+
+    _registry: Dict[str, Type[Node]] = {}
 
     @classmethod
-    def register(cls, node_type: str, node_class: Type[Node]):
+    def register(cls, node_type: str, node_class: Type[Node]) -> None:
+        """Register a node type with its class."""
         cls._registry[node_type] = node_class
 
     @classmethod
-    def get(cls, node_type: str) -> Type[Node]:
+    def get(cls, node_type: str) -> Optional[Type[Node]]:
+        """Get a node class by its type name."""
         return cls._registry.get(node_type)
 
     @classmethod
-    def register_default_nodes(cls):
+    def register_default_nodes(cls) -> None:
+        """Register all built-in node types."""
         for node_type, node_class in NODE_TYPES.items():
             cls.register(node_type, node_class)
+
+    @classmethod
+    def list_node_types(cls) -> List[str]:
+        """List all registered node types."""
+        return list(cls._registry.keys())

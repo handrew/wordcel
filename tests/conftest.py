@@ -3,6 +3,33 @@
 import os
 import glob
 import pytest
+from unittest.mock import patch, MagicMock
+
+
+@pytest.fixture
+def mock_llm_call():
+    """Mock LLM calls to return predictable responses.
+
+    Usage:
+        def test_something(mock_llm_call):
+            mock_llm_call.return_value = "Yes"
+            # or for multiple calls:
+            mock_llm_call.side_effect = ["Yes", "No", "Yes"]
+    """
+    mock = MagicMock(return_value="mocked response")
+
+    # Patch the default_functions dict on the WordcelDAG class
+    with patch.dict("wordcel.dag.dag.WordcelDAG.default_functions", {"llm_call": mock}):
+        yield mock
+
+
+@pytest.fixture
+def mock_llm_filter():
+    """Mock the llm_filter function used by LLMFilterNode."""
+    with patch("wordcel.dag.default_functions.llm_filter") as mock:
+        # By default, return the input dataframe unchanged
+        mock.side_effect = lambda df, *args, **kwargs: df
+        yield mock
 
 
 @pytest.fixture(scope="session", autouse=True)
