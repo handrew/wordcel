@@ -574,3 +574,150 @@ nodes:
     path: "test_output.txt"
     input: process_filtered
 ```
+
+
+## Patterns & Best Practices
+
+### Philosophy: YAML for Orchestration, Python for Logic
+
+WordcelDAG is designed with **YAML as a first-class citizen**. The goal is to keep pipeline structure declarative and editable without touching Python code. However, this doesn't mean forcing complex logic into YAML.
+
+**The rule of thumb:**
+- **YAML**: Define *what* nodes run and *how* they connect
+- **Python**: Define *complex transformations* via `PythonFunctionNode`
+
+Don't fight YAML's limitations. Embrace the separation.
+
+### When to Use `dataframe_operation` vs `python_function`
+
+**Use `dataframe_operation` for simple, one-liner pandas operations:**
+
+```yaml
+# Good: simple operations
+- id: first_10_rows
+  type: dataframe_operation
+  input: data
+  operation: head
+  args: [10]
+
+- id: select_columns
+  type: dataframe_operation
+  input: data
+  operation: filter
+  kwargs:
+    items: ["name", "score"]
+```
+
+**Use `python_function` for anything more complex:**
+
+```python
+# my_transforms.py
+def clean_and_filter(df):
+    """Complex logic belongs in Python, not YAML."""
+    df = df.dropna(subset=["text"])
+    df = df[df["score"] > 50]
+    df["text_clean"] = df["text"].str.lower().str.strip()
+    df = df.drop_duplicates(subset=["text_clean"])
+    return df
+```
+
+```yaml
+# Clean YAML, complex logic in Python
+- id: transform
+  type: python_function
+  function_path: my_transforms.clean_and_filter
+  input: raw_data
+```
+
+**Why?**
+- YAML for `dataframe_operation` gets ugly fast: `args: ["score > 50 and category == 'A'"]`
+- Python has syntax highlighting, linting, testing, debugging
+- `PythonFunctionNode` still gets DAG benefits: caching, retries, visualization
+
+### Conditional Branching
+
+WordcelDAG doesn't have explicit if/else branching. Instead, use **filter-based branching** where both branches run, but one receives filtered (possibly empty) data:
+
+```yaml
+nodes:
+  - id: load_data
+    type: csv
+    path: data.csv
+
+  # Split into two filtered datasets
+  - id: high_scores
+    type: dataframe_operation
+    input: load_data
+    operation: query
+    args: ["score >= 80"]
+
+  - id: low_scores
+    type: dataframe_operation
+    input: load_data
+    operation: query
+    args: ["score < 80"]
+
+  # Different processing for each branch
+  - id: process_high
+    type: llm
+    input: high_scores
+    template: "Congratulate this high performer: {input}"
+    input_field: name
+    output_field: message
+
+  - id: process_low
+    type: llm
+    input: low_scores
+    template: "Encourage this student to improve: {input}"
+    input_field: name
+    output_field: message
+
+  # Merge results back together
+  - id: combine
+    type: dataframe_operation
+    input: [process_high, process_low]
+    operation: concat
+```
+
+**Pros:** Simple, declarative, both branches are visible in DAG visualization.
+
+**Cons:** Both branches execute (one may process empty DataFrame). For expensive operations, filter early.
+
+### Node I/O Quick Reference
+
+| Node Type | Input | Output |
+|-----------|-------|--------|
+| `csv` | None | `DataFrame` |
+| `json` | None | `Dict` |
+| `yaml` | None | `Dict` |
+| `json_dataframe` | None | `DataFrame` |
+| `file_directory` | None (or Dict with `path`) | `DataFrame` with `file_path`, `content`, `file_type` columns |
+| `sql` | None | `DataFrame` |
+| `string_template` | `str`, `Dict`, `List`, `DataFrame` | `str` or `List[str]` (if `mode: multiple`) |
+| `string_concat` | `str`, `List[str]`, `DataFrame`, `Series` | `str` |
+| `llm` | `str`, `Dict`, `List`, `DataFrame` | Same shape as input, with `output_field` added |
+| `llm_filter` | `DataFrame` | `DataFrame` (filtered rows) |
+| `dataframe_operation` | `DataFrame` or `List[DataFrame]` | `DataFrame` |
+| `python_function` | Any | Any (depends on your function) |
+| `python_script` | Any (passed as CLI arg) | Depends on `return_output_file` or `return_stdout` |
+| `file_writer` | `str` or `List[str]` | None (writes to disk) |
+| `dag` | `Dict` or `DataFrame` | `Dict` of sub-DAG results |
+
+### Tips
+
+1. **Start with templates**: `wordcel dag new --template basic` gives you a working starting point.
+
+2. **Use `describe` to check node configs**: `wordcel dag describe llm` shows required and optional fields.
+
+3. **Dry run before executing**: `wordcel dag dryrun pipeline.yaml` validates without running.
+
+4. **Visualize your DAG**: `dag.save_image("pipeline.png")` helps debug complex pipelines.
+
+5. **Cache expensive operations**: Enable a backend to skip unchanged nodes on re-runs:
+   ```yaml
+   dag:
+     name: my_pipeline
+     backend:
+       type: local
+       path: .cache/
+   ```
