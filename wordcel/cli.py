@@ -480,6 +480,25 @@ def interactive():
     start_interactive_mode()
 
 
+@dag.command(cls=RichCommand)
+def builder():
+    """🛠️ Open the visual pipeline builder
+
+    Opens a browser-based drag-and-drop interface for building pipelines.
+    No additional dependencies required.
+    """
+    import webbrowser
+    from pathlib import Path
+
+    html_path = Path(__file__).parent / "builder.html"
+    if not html_path.exists():
+        console.print("[red]Error:[/red] builder.html not found")
+        return
+
+    console.print("[green]Opening visual builder in browser...[/green]")
+    webbrowser.open(f"file://{html_path.absolute()}")
+
+
 def get_template_content(template: str) -> str:
     """Get content for a specific template."""
     templates = {
