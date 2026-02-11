@@ -683,6 +683,38 @@ nodes:
 
 **Cons:** Both branches execute (one may process empty DataFrame). For expensive operations, filter early.
 
+### Column Composition & Assignment
+
+A common pattern is creating a new column based on existing ones (e.g., combining `title` and `body` into `full_text`). This is done in two steps:
+
+1.  **Generate the values** using `string_template` (or another node).
+2.  **Assign the values** back to the DataFrame using `dataframe_operation` with `set_column`.
+
+```yaml
+nodes:
+  - id: input_data
+    type: csv
+    path: data.csv
+
+  # Step 1: Create the combined text
+  - id: composed_col
+    type: string_template
+    input: input_data
+    template: "${title}\n\n${body}" 
+    mode: multiple
+
+  # Step 2: Assign it back to the DataFrame
+  - id: df_with_new_col
+    type: dataframe_operation
+    operation: set_column
+    column_name: "full_text"
+    input: 
+      - input_data      # The original dataframe
+      - composed_col    # The list of strings from Step 1
+```
+
+This pattern keeps operations atomic and composable.
+
 ### Node I/O Quick Reference
 
 | Node Type | Input | Output |
