@@ -17,7 +17,7 @@ matplotlib = "*"
 graphviz = "*"
 rich = ">=13.0.0"
 tenacity = "*"
-litellm = "*"
+litellm = "1.81.15"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
