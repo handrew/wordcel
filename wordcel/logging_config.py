@@ -59,7 +59,7 @@ def get_logger(name: str) -> logging.Logger:
     """Get a logger with consistent wordcel naming.
 
     Args:
-        name: Module name (e.g., 'dag.nodes', 'cli', 'rag')
+        name: Module name (e.g., 'dag.nodes', 'cli')
 
     Returns:
         Configured logger instance

@@ -129,7 +129,7 @@ def dag():
 @dag.command(cls=RichCommand)
 @click.argument("pipeline_file")
 @click.option(
-    "--template", help="Pipeline template to use (basic, advanced, rag, analysis)"
+    "--template", help="Pipeline template to use (basic, advanced, analysis)"
 )
 @click.option("--force", "-f", is_flag=True, help="Overwrite existing file")
 def new(pipeline_file, template, force):
@@ -140,7 +140,6 @@ def new(pipeline_file, template, force):
 
     - basic: Simple CSV processing with LLM
     - advanced: Multi-step complex pipeline
-    - rag: Retrieval Augmented Generation
     - analysis: Data analysis pipeline
     """
     if os.path.exists(pipeline_file) and not force:
@@ -155,7 +154,7 @@ def new(pipeline_file, template, force):
         content = get_template_content(template)
         if content is None:
             console.print(f"[red]✗[/red] Unknown template: {template}")
-            console.print("Available templates: basic, advanced, rag, analysis")
+            console.print("Available templates: basic, advanced, analysis")
             return
     else:
         content = PIPELINE_TEMPLATE
@@ -542,33 +541,6 @@ nodes:
     prompt: "Is this sentiment positive?"
     column: "sentiment"
     input: sentiment_analysis
-""",
-        "rag": """
-# 🧠 RAG (Retrieval Augmented Generation) Pipeline
-# Document processing and question answering
-
-dag:
-  name: "RAG Pipeline"
-
-nodes:
-  - id: load_documents
-    type: text
-    content: "Your document content here"
-
-  - id: chunk_documents
-    type: python_function
-    function: chunk_text
-    input: load_documents
-
-  - id: embed_chunks
-    type: python_function  
-    function: embed_text
-    input: chunk_documents
-
-  - id: query_processing
-    type: llm
-    template: "Based on this context: {input}, answer: What is the main topic?"
-    input: embed_chunks
 """,
         "analysis": """
 # 🧠 Data Analysis Pipeline

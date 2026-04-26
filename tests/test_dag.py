@@ -492,7 +492,7 @@ nodes:
         assert "failed" in str(excinfo.value)
         assert "dataframe_consumer" in str(excinfo.value)
         assert "invalid input type" in str(excinfo.value)
-        assert "Expected <class 'pandas.core.frame.DataFrame'>" in str(excinfo.value)
+        assert "pandas.DataFrame" in str(excinfo.value)
         assert "got str" in str(excinfo.value)
 
         # Clean up the extra file

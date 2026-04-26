@@ -306,7 +306,7 @@ class TestInteractiveMode:
 
         template = self.session._choose_template()
         # Should return a valid template
-        assert template in ["basic", "advanced", "rag", "analysis", "sentiment"]
+        assert template in ["basic", "advanced", "analysis", "sentiment"]
 
 
 class TestRichComponents:
@@ -397,15 +397,6 @@ class TestTemplates:
         assert content is not None
         assert "Advanced Pipeline" in content
         assert "sentiment_analysis" in content
-
-    def test_get_template_content_rag(self):
-        """Test RAG template content."""
-        from wordcel.cli import get_template_content
-
-        content = get_template_content("rag")
-        assert content is not None
-        assert "RAG Pipeline" in content
-        assert "embed_chunks" in content
 
     def test_get_template_content_analysis(self):
         """Test analysis template content."""

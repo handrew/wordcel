@@ -157,9 +157,8 @@ Type commands or 'help' for assistance. Press Ctrl+C or type 'exit' to quit.
         templates = {
             "1": ("basic", "Simple CSV processing with LLM"),
             "2": ("advanced", "Complex multi-step pipeline"),
-            "3": ("rag", "RAG (Retrieval Augmented Generation)"),
-            "4": ("analysis", "Data analysis and visualization"),
-            "5": ("sentiment", "Sentiment analysis pipeline"),
+            "3": ("analysis", "Data analysis and visualization"),
+            "4": ("sentiment", "Sentiment analysis pipeline"),
         }
 
         console.print("\n[bold cyan]Available Templates:[/bold cyan]")
@@ -180,9 +179,7 @@ Type commands or 'help' for assistance. Press Ctrl+C or type 'exit' to quit.
         template_content = PIPELINE_TEMPLATE
 
         # Customize based on template choice
-        if template == "rag":
-            template_content = self._get_rag_template()
-        elif template == "sentiment":
+        if template == "sentiment":
             template_content = self._get_sentiment_template()
 
         with open(filename, "w") as f:
@@ -268,33 +265,6 @@ Type commands or 'help' for assistance. Press Ctrl+C or type 'exit' to quit.
         import yaml
 
         return yaml.dump(data, default_flow_style=False, sort_keys=False)
-
-    def _get_rag_template(self) -> str:
-        """Get RAG pipeline template."""
-        return """
-dag:
-  name: "RAG Pipeline"
-
-nodes:
-  - id: load_documents
-    type: text
-    content: "Your document content here"
-
-  - id: chunk_documents
-    type: python_function
-    function: chunk_text
-    input: load_documents
-
-  - id: embed_chunks
-    type: python_function  
-    function: embed_text
-    input: chunk_documents
-
-  - id: query_processing
-    type: llm
-    template: "Based on this context: {input}, answer: What is the main topic?"
-    input: embed_chunks
-"""
 
     def _get_sentiment_template(self) -> str:
         """Get sentiment analysis template."""
@@ -395,7 +365,6 @@ nodes:
         templates = [
             ("basic", "Simple CSV processing with LLM transformations"),
             ("advanced", "Multi-step pipeline with complex operations"),
-            ("rag", "Retrieval Augmented Generation setup"),
             ("analysis", "Data analysis with visualization"),
             ("sentiment", "Sentiment analysis pipeline"),
         ]

@@ -2,7 +2,6 @@
 
 import pandas as pd
 from sqlalchemy import create_engine
-from ..featurize import apply_io_bound_function
 from ..llms import llm_call
 from ..config import DEFAULT_MODEL
 
@@ -23,6 +22,7 @@ def llm_filter(
     num_threads: int = 1,
 ) -> pd.DataFrame:
     """Helper function to filter a DataFrame using an LLM yes/no question."""
+    from ..featurize import apply_io_bound_function
     if num_threads == 1:
         results = df[column].apply(
             lambda value: llm_call(prompt + "\n\n----\n\n" + value, model=model)
