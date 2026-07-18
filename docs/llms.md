@@ -21,7 +21,7 @@ Wrapper for OpenAI, Anthropic, and Google calls using `litellm`.
 **Supported Providers:**
 - `openai`: For OpenAI models (e.g., "openai/gpt-4o").
 - `anthropic`: For Anthropic models (e.g., "anthropic/claude-3-haiku-20240307").
-- `gemini`: For Google Gemini models (e.g., "gemini/gemini-2.5-flash").
+- `gemini`: For Google Gemini models (e.g., "gemini/gemini-3.5-flash").
 
 **Returns:**
 - str: The generated text response from the language model.
@@ -71,7 +71,7 @@ response = llm_call("Tell me a joke", model="openai/gpt-4o")
 
 ### Google Gemini
 ```python
-response = llm_call("Explain machine learning", model="gemini/gemini-2.5-flash")
+response = llm_call("Explain machine learning", model="gemini/gemini-3.5-flash")
 ```
 
 ### Anthropic
