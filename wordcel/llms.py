@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 import openai
 import litellm
 
+from .config import DEFAULT_MODELS
+
 SUPPORTED_PROVIDERS = ["openai", "anthropic", "gemini", "openrouter"]
 
 
@@ -14,7 +16,7 @@ def llm_call(prompt: str, model: Optional[str] = None, **kwargs: Any) -> str:
 
     Args:
         prompt: The input prompt for the LLM
-        model: Model name in format '<provider>/<model>' (e.g., 'openai/gpt-4o')
+        model: Model name in format '<provider>/<model>' (e.g., 'openai/gpt-6.1-sol')
         **kwargs: Additional parameters like temperature, max_tokens, system_prompt
 
     Returns:
@@ -25,12 +27,14 @@ def llm_call(prompt: str, model: Optional[str] = None, **kwargs: Any) -> str:
     """
 
     assert model is not None, "Model name must be specified."
+    if model in DEFAULT_MODELS:
+        model = DEFAULT_MODELS[model]
     assert "/" in model, "Model name must be in the form `<provider>/<model>`."
     parts = model.split("/")
     provider, model_name = parts[0], "/".join(parts[1:])
     error_msg = f"Provider `{provider}` not supported. Supported providers: {SUPPORTED_PROVIDERS}. "
     error_msg += (
-        "Give your model in the form `<provider>/<model>`, like `openai/gpt-4o`."
+        "Give your model in the form `<provider>/<model>`, like `openai/gpt-6.1-sol`."
     )
     assert provider in SUPPORTED_PROVIDERS, error_msg
 
